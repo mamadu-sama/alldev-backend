@@ -1,0 +1,134 @@
+import { Request, Response, NextFunction } from 'express';
+import { AdminService } from '@/services/admin.service';
+import { Role } from '@prisma/client';
+
+export class AdminController {
+  static async getAllUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const result = await AdminService.getAllUsers(page, limit);
+
+      res.json({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateUserRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.params;
+      const { roles } = req.body;
+      const adminId = req.user!.id;
+
+      const user = await AdminService.updateUserRole(adminId, userId, roles as Role[]);
+
+      res.json({
+        success: true,
+        data: user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async banUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.params;
+      const { reason, duration } = req.body;
+      const adminId = req.user!.id;
+
+      await AdminService.banUser(adminId, userId, reason, duration);
+
+      res.json({
+        success: true,
+        message: 'Utilizador banido com sucesso',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unbanUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user!.id;
+
+      await AdminService.unbanUser(adminId, userId);
+
+      res.json({
+        success: true,
+        message: 'Ban removido com sucesso',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { userId } = req.params;
+      const adminId = req.user!.id;
+
+      await AdminService.deleteUser(adminId, userId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getMaintenanceMode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const maintenance = await AdminService.getMaintenanceMode();
+
+      res.json({
+        success: true,
+        data: maintenance,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateMaintenanceMode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { isActive, message, allowedRoles } = req.body;
+      const adminId = req.user!.id;
+
+      const maintenance = await AdminService.updateMaintenanceMode(
+        adminId,
+        isActive,
+        message,
+        allowedRoles as Role[]
+      );
+
+      res.json({
+        success: true,
+        data: maintenance,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getStatistics(req: Request, res: Response, next: NextFunction) {
+    try {
+      const stats = await AdminService.getStatistics();
+
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+}
+
+

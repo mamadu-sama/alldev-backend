@@ -6,6 +6,7 @@ import compression from 'compression';
 import { env } from './config/env';
 import { errorHandler } from './middleware/error.middleware';
 import { globalRateLimiter } from './middleware/rateLimiter.middleware';
+import { checkMaintenance } from './middleware/maintenance.middleware';
 import routes from './routes';
 
 const app = express();
@@ -46,6 +47,9 @@ app.get('/health', (req, res) => {
     environment: env.NODE_ENV,
   });
 });
+
+// Maintenance mode check
+app.use(checkMaintenance);
 
 // API routes
 app.use(env.API_PREFIX, routes);
