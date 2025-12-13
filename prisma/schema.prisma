@@ -87,6 +87,7 @@ model User {
   reportedContent   Report[]          @relation("ReportedUser")
   moderatorActions  ModeratorAction[]
   refreshTokens     RefreshToken[]
+  passwordResets    PasswordReset[]
 
   @@index([username])
   @@index([email])
@@ -317,7 +318,11 @@ model PasswordReset {
   used      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
 
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([token])
+  @@index([userId])
   @@map("password_resets")
 }
 
