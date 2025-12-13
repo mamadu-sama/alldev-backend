@@ -1,0 +1,334 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum UserLevel {
+  NOVATO
+  CONTRIBUIDOR
+  EXPERT
+  GURU
+}
+
+enum VoteType {
+  UP
+  DOWN
+}
+
+enum NotificationType {
+  COMMENT
+  REPLY
+  VOTE
+  ACCEPTED
+  MENTION
+  SYSTEM
+}
+
+enum ReportStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  INAPPROPRIATE
+  OFF_TOPIC
+  DUPLICATE
+  OTHER
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model User {
+  id           String    @id @default(uuid())
+  username     String    @unique
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  avatarUrl    String?   @map("avatar_url")
+  bio          String?
+  skills       String[]  @default([])
+  reputation   Int       @default(0)
+  level        UserLevel @default(NOVATO)
+  isActive     Boolean   @default(true) @map("is_active")
+  isVerified   Boolean   @default(false) @map("is_verified")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  socialLinks       SocialLinks?
+  roles             UserRole[]
+  posts             Post[]
+  comments          Comment[]
+  votes             Vote[]
+  notifications     Notification[]
+  sentNotifications Notification[]    @relation("SentNotifications")
+  reports           Report[]          @relation("Reporter")
+  reportedContent   Report[]          @relation("ReportedUser")
+  moderatorActions  ModeratorAction[]
+  refreshTokens     RefreshToken[]
+
+  @@index([username])
+  @@index([email])
+  @@index([reputation])
+  @@map("users")
+}
+
+model SocialLinks {
+  id        String  @id @default(uuid())
+  userId    String  @unique @map("user_id")
+  github    String?
+  linkedin  String?
+  twitter   String?
+  portfolio String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("social_links")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  role   Role
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role])
+  @@map("user_roles")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+model Post {
+  id                String   @id @default(uuid())
+  title             String
+  content           String
+  slug              String   @unique
+  authorId          String   @map("author_id")
+  votes             Int      @default(0)
+  views             Int      @default(0)
+  commentCount      Int      @default(0) @map("comment_count")
+  hasAcceptedAnswer Boolean  @default(false) @map("has_accepted_answer")
+  isHidden          Boolean  @default(false) @map("is_hidden")
+  isLocked          Boolean  @default(false) @map("is_locked")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  author   User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags     PostTag[]
+  comments Comment[]
+  voteList Vote[]
+  reports  Report[]
+  actions  ModeratorAction[]
+
+  @@index([slug])
+  @@index([authorId])
+  @@index([createdAt])
+  @@index([votes])
+  @@map("posts")
+}
+
+model Tag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  postCount   Int      @default(0) @map("post_count")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  posts PostTag[]
+
+  @@index([slug])
+  @@index([postCount])
+  @@map("tags")
+}
+
+model PostTag {
+  postId String @map("post_id")
+  tagId  String @map("tag_id")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+  @@map("post_tags")
+}
+
+model Comment {
+  id         String   @id @default(uuid())
+  content    String
+  postId     String   @map("post_id")
+  authorId   String   @map("author_id")
+  parentId   String?  @map("parent_id")
+  votes      Int      @default(0)
+  isAccepted Boolean  @default(false) @map("is_accepted")
+  isHidden   Boolean  @default(false) @map("is_hidden")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  post     Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author   User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent   Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies  Comment[]           @relation("CommentReplies")
+  voteList Vote[]
+  reports  Report[]
+  actions  ModeratorAction[]
+
+  @@index([postId])
+  @@index([authorId])
+  @@index([parentId])
+  @@map("comments")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  postId    String?  @map("post_id")
+  commentId String?  @map("comment_id")
+  type      VoteType
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post    Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@unique([userId, commentId])
+  @@index([postId])
+  @@index([commentId])
+  @@map("votes")
+}
+
+model Notification {
+  id               String           @id @default(uuid())
+  userId           String           @map("user_id")
+  type             NotificationType
+  title            String?
+  message          String
+  read             Boolean          @default(false)
+  relatedPostId    String?          @map("related_post_id")
+  relatedCommentId String?          @map("related_comment_id")
+  senderId         String?          @map("sender_id")
+  createdAt        DateTime         @default(now()) @map("created_at")
+
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender User? @relation("SentNotifications", fields: [senderId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model Report {
+  id             String       @id @default(uuid())
+  reporterId     String       @map("reporter_id")
+  postId         String?      @map("post_id")
+  commentId      String?      @map("comment_id")
+  reportedUserId String?      @map("reported_user_id")
+  reason         ReportReason
+  description    String?
+  status         ReportStatus @default(PENDING)
+  resolvedById   String?      @map("resolved_by_id")
+  resolvedAt     DateTime?    @map("resolved_at")
+  resolverNotes  String?      @map("resolver_notes")
+  createdAt      DateTime     @default(now()) @map("created_at")
+
+  reporter     User     @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  post         Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment      Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reportedUser User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("reports")
+}
+
+model ModeratorAction {
+  id           String   @id @default(uuid())
+  moderatorId  String   @map("moderator_id")
+  action       String
+  reason       String?
+  postId       String?  @map("post_id")
+  commentId    String?  @map("comment_id")
+  targetUserId String?  @map("target_user_id")
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  moderator User     @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
+  post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  comment   Comment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+
+  @@index([moderatorId])
+  @@index([createdAt])
+  @@map("moderator_actions")
+}
+
+model MaintenanceMode {
+  id        String    @id @default(uuid())
+  isEnabled Boolean   @default(false) @map("is_enabled")
+  message   String?
+  endTime   DateTime? @map("end_time")
+  updatedBy String?   @map("updated_by")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  @@map("maintenance_mode")
+}
+
+model PasswordReset {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("password_resets")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token])
+  @@map("email_verifications")
+}
+

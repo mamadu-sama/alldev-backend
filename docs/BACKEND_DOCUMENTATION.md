@@ -115,7 +115,7 @@ Criar ficheiro `.env`:
 ```env
 # Server
 NODE_ENV=development
-PORT=3000
+PORT=3001
 API_PREFIX=/api
 
 # Database
@@ -138,7 +138,11 @@ SMTP_PASS=your-password
 EMAIL_FROM=noreply@alldev.com
 
 # Storage
-UPLOAD_DIR=./uploads
+AWS_ACCESS_KEY_ID=aws_access_key_here
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key_here
+AWS_REGION=eu-west-3
+AWS_BUCKET_NAME=bucket-name
+AWS_BASE_URL=https://bucket-name.s3.eu-west-3.amazonaws.com
 MAX_FILE_SIZE=5242880
 ALLOWED_FILE_TYPES=image/jpeg,image/png,image/webp
 
