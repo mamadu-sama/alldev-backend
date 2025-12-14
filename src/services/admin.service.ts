@@ -43,7 +43,10 @@ export class AdminService {
   }
 
   static async updateUserRole(adminId: string, userId: string, roles: Role[]) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      include: { roles: true }
+    });
 
     if (!user) {
       throw new NotFoundError('Utilizador não encontrado');
@@ -53,9 +56,24 @@ export class AdminService {
       throw new ValidationError('Não pode alterar as suas próprias permissões');
     }
 
-    const updatedUser = await prisma.user.update({
+    // Delete all existing roles and create new ones
+    await prisma.$transaction(async (tx) => {
+      // Delete existing roles
+      await tx.userRole.deleteMany({
+        where: { userId },
+      });
+
+      // Create new roles
+      await tx.userRole.createMany({
+        data: roles.map(role => ({
+          userId,
+          role,
+        })),
+      });
+    });
+
+    const updatedUser = await prisma.user.findUnique({
       where: { id: userId },
-      data: { roles },
       select: {
         id: true,
         username: true,
@@ -67,7 +85,7 @@ export class AdminService {
     logger.info(`User roles updated by admin`, {
       adminId,
       userId,
-      oldRoles: user.roles,
+      oldRoles: user.roles.map(r => r.role),
       newRoles: roles,
     });
 
@@ -75,7 +93,10 @@ export class AdminService {
   }
 
   static async banUser(adminId: string, userId: string, reason: string, duration?: number) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      include: { roles: true }
+    });
 
     if (!user) {
       throw new NotFoundError('Utilizador não encontrado');
@@ -85,7 +106,7 @@ export class AdminService {
       throw new ValidationError('Não pode banir a si próprio');
     }
 
-    if (user.roles.includes('ADMIN')) {
+    if (user.roles.some(r => r.role === 'ADMIN')) {
       throw new ValidationError('Não pode banir um administrador');
     }
 
@@ -147,7 +168,10 @@ export class AdminService {
   }
 
   static async deleteUser(adminId: string, userId: string) {
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ 
+      where: { id: userId },
+      include: { roles: true }
+    });
 
     if (!user) {
       throw new NotFoundError('Utilizador não encontrado');
@@ -157,7 +181,7 @@ export class AdminService {
       throw new ValidationError('Não pode deletar a si próprio');
     }
 
-    if (user.roles.includes('ADMIN')) {
+    if (user.roles.some(r => r.role === 'ADMIN')) {
       throw new ValidationError('Não pode deletar um administrador');
     }
 
