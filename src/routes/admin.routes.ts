@@ -1,9 +1,16 @@
 import { Router } from 'express';
 import { AdminController } from '@/controllers/admin.controller';
+import { SettingsController } from '@/controllers/settings.controller';
+import { TagController } from '@/controllers/tag.controller';
+import { ReportController } from '@/controllers/report.controller';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireRole } from '@/middleware/role.middleware';
+import { requireModerator } from '@/middleware/role.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import { banUserSchema, updateMaintenanceModeSchema } from '@/schemas/moderation.schema';
+import { updateSettingsSchema } from '@/schemas/settings.schema';
+import { createTagSchema, updateTagSchema } from '@/schemas/tag.schema';
+import { updateReportStatusSchema } from '@/schemas/report.schema';
 import { Role } from '@prisma/client';
 import { z } from 'zod';
 
@@ -56,6 +63,31 @@ router.post('/admin/posts/:postId/unhide', ...adminAuth, AdminController.unhideP
 // Comments Management
 router.get('/admin/comments', ...adminAuth, AdminController.getAllComments);
 router.delete('/admin/comments/:commentId', ...adminAuth, AdminController.deleteComment);
+
+// Settings Management
+router.get('/admin/settings', ...adminAuth, SettingsController.getSettings);
+router.patch(
+  '/admin/settings',
+  ...adminAuth,
+  validate(updateSettingsSchema),
+  SettingsController.updateSettings
+);
+
+// Tags Management
+router.get('/admin/tags', ...adminAuth, TagController.getAllTags);
+router.post('/admin/tags', ...adminAuth, validate(createTagSchema), TagController.createTag);
+router.patch('/admin/tags/:id', ...adminAuth, validate(updateTagSchema), TagController.updateTag);
+router.delete('/admin/tags/:id', ...adminAuth, TagController.deleteTag);
+
+// Reports Management (Admin + Moderator)
+const moderatorAuth = [authenticate, requireModerator];
+router.get('/admin/reports', ...moderatorAuth, ReportController.getReports);
+router.patch(
+  '/admin/reports/:reportId',
+  ...moderatorAuth,
+  validate(updateReportStatusSchema),
+  ReportController.updateReportStatus
+);
 
 export default router;
 

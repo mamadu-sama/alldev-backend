@@ -3,6 +3,7 @@ import { Role } from '@prisma/client';
 import { logger } from '@/utils/logger';
 import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
 import { NotFoundError, ValidationError } from '@/types';
+import { clearMaintenanceCache } from '@/middleware/maintenance.middleware';
 
 export class AdminService {
   static async getAllUsers(page: number = 1, limit: number = 50) {
@@ -204,9 +205,8 @@ export class AdminService {
       // Create default maintenance mode entry
       maintenance = await prisma.maintenanceMode.create({
         data: {
-          isActive: false,
+          isEnabled: false,
           message: 'O site está em manutenção. Voltaremos em breve.',
-          allowedRoles: ['ADMIN'],
         },
       });
     }
@@ -216,36 +216,41 @@ export class AdminService {
 
   static async updateMaintenanceMode(
     adminId: string,
-    isActive: boolean,
+    isEnabled: boolean,
     message?: string,
-    allowedRoles?: Role[]
+    endTime?: Date | null
   ) {
     let maintenance = await prisma.maintenanceMode.findFirst();
 
     if (!maintenance) {
       maintenance = await prisma.maintenanceMode.create({
         data: {
-          isActive,
+          isEnabled,
           message: message || 'O site está em manutenção. Voltaremos em breve.',
-          allowedRoles: allowedRoles || ['ADMIN'],
+          endTime: endTime || null,
+          updatedBy: adminId,
         },
       });
     } else {
       maintenance = await prisma.maintenanceMode.update({
         where: { id: maintenance.id },
         data: {
-          isActive,
+          isEnabled,
           message: message || maintenance.message,
-          allowedRoles: allowedRoles || maintenance.allowedRoles,
+          endTime: endTime !== undefined ? endTime : maintenance.endTime,
+          updatedBy: adminId,
         },
       });
     }
 
+    // Clear maintenance cache so changes take effect immediately
+    clearMaintenanceCache();
+
     logger.info(`Maintenance mode updated by admin`, {
       adminId,
-      isActive,
+      isEnabled,
       message,
-      allowedRoles,
+      endTime,
     });
 
     return maintenance;

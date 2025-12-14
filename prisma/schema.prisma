@@ -309,6 +309,34 @@ model MaintenanceMode {
   @@map("maintenance_mode")
 }
 
+model Settings {
+  id                         String   @id @default(uuid())
+  // General
+  siteName                   String   @default("Alldev") @map("site_name")
+  siteDescription            String   @default("Comunidade de desenvolvedores") @map("site_description")
+  siteUrl                    String   @default("https://alldev.com") @map("site_url")
+  contactEmail               String   @default("contato@alldev.com") @map("contact_email")
+  // Moderation
+  enableRegistration         Boolean  @default(true) @map("enable_registration")
+  requireEmailVerification   Boolean  @default(true) @map("require_email_verification")
+  moderationMode             String   @default("post") @map("moderation_mode") // none, post, pre
+  minReputationToPost        Int      @default(0) @map("min_reputation_to_post")
+  minReputationToComment     Int      @default(0) @map("min_reputation_to_comment")
+  maxTagsPerPost             Int      @default(5) @map("max_tags_per_post")
+  // Notifications
+  enableNotifications        Boolean  @default(true) @map("enable_notifications")
+  enableEmailNotifications   Boolean  @default(true) @map("enable_email_notifications")
+  // Appearance
+  primaryColor               String   @default("#3b82f6") @map("primary_color")
+  darkModeDefault            Boolean  @default(true) @map("dark_mode_default")
+  // Metadata
+  updatedBy                  String?  @map("updated_by")
+  updatedAt                  DateTime @updatedAt @map("updated_at")
+  createdAt                  DateTime @default(now()) @map("created_at")
+
+  @@map("settings")
+}
+
 model PasswordReset {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")

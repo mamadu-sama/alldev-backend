@@ -14,9 +14,9 @@ export const banUserSchema = z.object({
 });
 
 export const updateMaintenanceModeSchema = z.object({
-  isActive: z.boolean(),
+  isEnabled: z.boolean(),
   message: z.string().optional(),
-  allowedRoles: z.array(z.enum(['USER', 'MODERATOR', 'ADMIN'])).optional(),
+  endTime: z.string().datetime().optional().nullable(),
 });
 
 

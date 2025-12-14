@@ -98,14 +98,14 @@ export class AdminController {
 
   static async updateMaintenanceMode(req: Request, res: Response, next: NextFunction) {
     try {
-      const { isActive, message, allowedRoles } = req.body;
+      const { isEnabled, message, endTime } = req.body;
       const adminId = req.user!.id;
 
       const maintenance = await AdminService.updateMaintenanceMode(
         adminId,
-        isActive,
+        isEnabled,
         message,
-        allowedRoles as Role[]
+        endTime ? new Date(endTime) : null
       );
 
       res.json({
