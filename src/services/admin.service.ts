@@ -120,7 +120,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'BAN_USER',
+          actionType: 'BAN_USER',
           reason,
           targetUserId: userId,
         },
@@ -155,7 +155,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'UNBAN_USER',
+          actionType: 'UNBAN_USER',
           reason: 'User unbanned',
           targetUserId: userId,
         },
@@ -429,7 +429,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'DELETE_POST',
+          actionType: 'DELETE_POST',
           reason: 'Post deleted by admin',
           postId: postId,
         },
@@ -464,7 +464,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'HIDE_POST',
+          actionType: 'HIDE_POST',
           reason,
           postId: postId,
         },
@@ -490,7 +490,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'UNHIDE_POST',
+          actionType: 'UNHIDE_POST',
           reason: 'Post unhidden by admin',
           postId: postId,
         },
@@ -560,7 +560,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          action: 'DELETE_COMMENT',
+          actionType: 'DELETE_COMMENT',
           reason: 'Comment deleted by admin',
           commentId: commentId,
         },

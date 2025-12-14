@@ -3,6 +3,7 @@ import { AdminController } from '@/controllers/admin.controller';
 import { SettingsController } from '@/controllers/settings.controller';
 import { TagController } from '@/controllers/tag.controller';
 import { ReportController } from '@/controllers/report.controller';
+import { ContactAdminController } from '@/controllers/contact-admin.controller';
 import { authenticate } from '@/middleware/auth.middleware';
 import { requireRole } from '@/middleware/role.middleware';
 import { requireModerator } from '@/middleware/role.middleware';
@@ -11,6 +12,7 @@ import { banUserSchema, updateMaintenanceModeSchema } from '@/schemas/moderation
 import { updateSettingsSchema } from '@/schemas/settings.schema';
 import { createTagSchema, updateTagSchema } from '@/schemas/tag.schema';
 import { updateReportStatusSchema } from '@/schemas/report.schema';
+import { updateContactStatusSchema, sendReplySchema } from '@/schemas/contact-admin.schema';
 import { Role } from '@prisma/client';
 import { z } from 'zod';
 
@@ -88,6 +90,24 @@ router.patch(
   validate(updateReportStatusSchema),
   ReportController.updateReportStatus
 );
+
+// Contact Messages Management (Admin only)
+router.get('/admin/contact-messages/stats', ...adminAuth, ContactAdminController.getStats);
+router.get('/admin/contact-messages', ...adminAuth, ContactAdminController.getAllMessages);
+router.get('/admin/contact-messages/:id', ...adminAuth, ContactAdminController.getMessageById);
+router.patch(
+  '/admin/contact-messages/:id/status',
+  ...adminAuth,
+  validate(updateContactStatusSchema),
+  ContactAdminController.updateStatus
+);
+router.post(
+  '/admin/contact-messages/:id/reply',
+  ...adminAuth,
+  validate(sendReplySchema),
+  ContactAdminController.sendReply
+);
+router.delete('/admin/contact-messages/:id', ...adminAuth, ContactAdminController.deleteMessage);
 
 export default router;
 

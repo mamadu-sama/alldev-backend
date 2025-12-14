@@ -10,6 +10,7 @@ import searchRoutes from './search.routes';
 import reportRoutes from './report.routes';
 import moderationRoutes from './moderation.routes';
 import adminRoutes from './admin.routes';
+import moderatorRoutes from './moderator.routes';
 import contactRoutes from './contact.routes';
 import featureRequestRoutes from './feature-request.routes';
 
@@ -27,6 +28,7 @@ router.use('/', searchRoutes);
 router.use('/', reportRoutes);
 router.use('/', moderationRoutes);
 router.use('/', adminRoutes);
+router.use('/', moderatorRoutes);
 router.use('/contact', contactRoutes);
 router.use('/', featureRequestRoutes);
 

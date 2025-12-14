@@ -54,6 +54,18 @@ enum ReportReason {
   OTHER
 }
 
+enum ModeratorActionType {
+  APPROVE_CONTENT
+  HIDE_POST
+  UNHIDE_POST
+  DELETE_POST
+  DELETE_COMMENT
+  WARN_USER
+  BAN_USER
+  UNBAN_USER
+  ESCALATE
+}
+
 enum FeatureRequestStatus {
   PENDING
   REVIEWING
@@ -304,15 +316,16 @@ model Report {
 }
 
 model ModeratorAction {
-  id           String   @id @default(uuid())
-  moderatorId  String   @map("moderator_id")
-  action       String
+  id           String               @id @default(uuid())
+  moderatorId  String               @map("moderator_id")
+  actionType   ModeratorActionType  @default(APPROVE_CONTENT) @map("action_type")
   reason       String?
-  postId       String?  @map("post_id")
-  commentId    String?  @map("comment_id")
-  targetUserId String?  @map("target_user_id")
+  notes        String?
+  postId       String?              @map("post_id")
+  commentId    String?              @map("comment_id")
+  targetUserId String?              @map("target_user_id")
   metadata     Json?
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt    DateTime             @default(now()) @map("created_at")
 
   moderator User     @relation(fields: [moderatorId], references: [id], onDelete: Cascade)
   post      Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
