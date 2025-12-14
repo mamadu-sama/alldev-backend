@@ -14,7 +14,7 @@ export const createReportSchema = z.object({
 });
 
 export const updateReportStatusSchema = z.object({
-  status: z.enum(['PENDING', 'REVIEWING', 'RESOLVED', 'REJECTED'], {
+  status: z.enum(['PENDING', 'RESOLVED', 'DISMISSED'], {
     errorMap: () => ({ message: 'Status inválido' }),
   }),
   resolution: z.string().optional(),

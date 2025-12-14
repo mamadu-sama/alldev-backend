@@ -1,7 +1,7 @@
-import { prisma } from '@/config/database';
-import { ReportReason, ReportStatus } from '@prisma/client';
-import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
-import { NotFoundError, ValidationError } from '@/types';
+import { prisma } from "@/config/database";
+import { ReportReason, ReportStatus } from "@prisma/client";
+import { getPaginationParams, createPaginationMeta } from "@/utils/pagination";
+import { NotFoundError, ValidationError } from "@/types";
 
 export class ReportService {
   static async createReport(
@@ -13,11 +13,13 @@ export class ReportService {
   ) {
     // Verify that either postId or commentId is provided
     if (!postId && !commentId) {
-      throw new ValidationError('Deve fornecer postId ou commentId');
+      throw new ValidationError("Deve fornecer postId ou commentId");
     }
 
     if (postId && commentId) {
-      throw new ValidationError('Não pode denunciar post e comentário simultaneamente');
+      throw new ValidationError(
+        "Não pode denunciar post e comentário simultaneamente"
+      );
     }
 
     // Check if user already reported this content
@@ -29,21 +31,23 @@ export class ReportService {
     });
 
     if (existingReport) {
-      throw new ValidationError('Já denunciou este conteúdo');
+      throw new ValidationError("Já denunciou este conteúdo");
     }
 
     // Verify content exists
     if (postId) {
       const post = await prisma.post.findUnique({ where: { id: postId } });
       if (!post) {
-        throw new NotFoundError('Post não encontrado');
+        throw new NotFoundError("Post não encontrado");
       }
     }
 
     if (commentId) {
-      const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+      const comment = await prisma.comment.findUnique({
+        where: { id: commentId },
+      });
       if (!comment) {
-        throw new NotFoundError('Comentário não encontrado');
+        throw new NotFoundError("Comentário não encontrado");
       }
     }
 
@@ -83,6 +87,7 @@ export class ReportService {
               select: {
                 id: true,
                 content: true,
+                post: { select: { slug: true } },
                 author: {
                   select: {
                     id: true,
@@ -136,6 +141,7 @@ export class ReportService {
             select: {
               id: true,
               content: true,
+              post: { select: { slug: true } },
               author: {
                 select: {
                   id: true,
@@ -144,14 +150,14 @@ export class ReportService {
               },
             },
           },
-          reviewer: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
+          // reviewer: { // ❌ REMOVIDO pois não existe reviewer no schema
+          //   select: {
+          //     id: true,
+          //     username: true,
+          //   },
+          // },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -175,25 +181,19 @@ export class ReportService {
     });
 
     if (!report) {
-      throw new NotFoundError('Denúncia não encontrada');
+      throw new NotFoundError("Denúncia não encontrada");
     }
 
     return await prisma.report.update({
       where: { id: reportId },
       data: {
         status,
-        resolution,
-        reviewerId,
-        reviewedAt: new Date(),
+        resolverNotes: resolution,
+        resolvedById: reviewerId,
+        resolvedAt: new Date(),
       },
       include: {
         reporter: {
-          select: {
-            id: true,
-            username: true,
-          },
-        },
-        reviewer: {
           select: {
             id: true,
             username: true,
@@ -203,5 +203,3 @@ export class ReportService {
     });
   }
 }
-
-

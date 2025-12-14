@@ -42,8 +42,8 @@ enum NotificationType {
 
 enum ReportStatus {
   PENDING
-  APPROVED
-  REJECTED
+  RESOLVED
+  DISMISSED
 }
 
 enum ReportReason {
