@@ -1,103 +1,13 @@
 import { prisma } from '@/config/database';
-import { NotificationType } from '@prisma/client';
+import { NotificationType, Role } from '@prisma/client';
 import { logger } from '@/utils/logger';
 import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
 
-interface CreateNotificationParams {
-  userId: string;
-  type: NotificationType;
-  message: string;
-  title?: string;
-  relatedPostId?: string;
-  relatedCommentId?: string;
-  senderId?: string;
-}
-
 export class NotificationService {
-  static async create(params: CreateNotificationParams): Promise<void> {
-    try {
-      // Don't notify users of their own actions
-      if (params.userId === params.senderId) {
-        return;
-      }
-
-      await prisma.notification.create({
-        data: params,
-      });
-    } catch (error) {
-      logger.error('Failed to create notification:', error);
-    }
-  }
-
-  static async notifyComment(
-    postAuthorId: string,
-    commenterUsername: string,
-    commenterId: string,
-    postId: string,
-    postSlug: string,
-    commentId: string
-  ): Promise<void> {
-    await this.create({
-      userId: postAuthorId,
-      type: 'COMMENT',
-      message: `${commenterUsername} comentou no seu post`,
-      relatedPostId: postId,
-      relatedCommentId: commentId,
-      senderId: commenterId,
-    });
-  }
-
-  static async notifyReply(
-    parentCommentAuthorId: string,
-    replierUsername: string,
-    replierId: string,
-    postId: string,
-    commentId: string
-  ): Promise<void> {
-    await this.create({
-      userId: parentCommentAuthorId,
-      type: 'REPLY',
-      message: `${replierUsername} respondeu ao seu comentário`,
-      relatedPostId: postId,
-      relatedCommentId: commentId,
-      senderId: replierId,
-    });
-  }
-
-  static async notifyAccepted(
-    commentAuthorId: string,
-    postId: string,
-    commentId: string,
-    accepterId: string
-  ): Promise<void> {
-    await this.create({
-      userId: commentAuthorId,
-      type: 'ACCEPTED',
-      message: 'A sua resposta foi aceite!',
-      relatedPostId: postId,
-      relatedCommentId: commentId,
-      senderId: accepterId,
-    });
-  }
-
-  static async notifyMention(
-    mentionedUserId: string,
-    mentionerUsername: string,
-    mentionerId: string,
-    postId: string,
-    commentId?: string
-  ): Promise<void> {
-    await this.create({
-      userId: mentionedUserId,
-      type: 'MENTION',
-      message: `${mentionerUsername} mencionou você`,
-      relatedPostId: postId,
-      relatedCommentId: commentId,
-      senderId: mentionerId,
-    });
-  }
-
-  static async getNotifications(
+  /**
+   * Get user notifications with pagination
+   */
+  static async getUserNotifications(
     userId: string,
     page: number = 1,
     limit: number = 20,
@@ -113,30 +23,48 @@ export class NotificationService {
     const [notifications, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where,
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take,
       }),
       prisma.notification.count({ where }),
-      prisma.notification.count({ where: { userId, read: false } }),
+      prisma.notification.count({
+        where: { userId, read: false },
+      }),
     ]);
 
     return {
-      data: notifications,
+      notifications,
       meta: {
-        ...createPaginationMeta(page, limit, total),
+        ...createPaginationMeta({ total, page, limit }),
         unreadCount,
       },
     };
   }
 
+  /**
+   * Mark notification as read
+   */
   static async markAsRead(notificationId: string, userId: string) {
-    const notification = await prisma.notification.findFirst({
-      where: { id: notificationId, userId },
+    const notification = await prisma.notification.findUnique({
+      where: { id: notificationId },
     });
 
     if (!notification) {
       throw new Error('Notificação não encontrada');
+    }
+
+    if (notification.userId !== userId) {
+      throw new Error('Sem permissão para marcar esta notificação');
     }
 
     return await prisma.notification.update({
@@ -145,26 +73,223 @@ export class NotificationService {
     });
   }
 
+  /**
+   * Mark all user notifications as read
+   */
   static async markAllAsRead(userId: string) {
     await prisma.notification.updateMany({
       where: { userId, read: false },
       data: { read: true },
     });
+
+    return { success: true };
   }
 
-  static async deleteOldNotifications(daysOld: number = 30): Promise<void> {
+  /**
+   * Send notification to specific user (internal use)
+   */
+  static async sendToUser(
+    userId: string,
+    type: NotificationType,
+    message: string,
+    options?: {
+      title?: string;
+      senderId?: string;
+      relatedPostId?: string;
+      relatedCommentId?: string;
+    }
+  ) {
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          userId,
+          type,
+          title: options?.title,
+          message,
+          senderId: options?.senderId,
+          relatedPostId: options?.relatedPostId,
+          relatedCommentId: options?.relatedCommentId,
+        },
+      });
+
+      logger.info('Notification sent to user', { userId, type, notificationId: notification.id });
+      return notification;
+    } catch (error) {
+      logger.error('Error sending notification', { error, userId, type });
+      throw error;
+    }
+  }
+
+  /**
+   * Send SYSTEM notification from admin to multiple users (broadcast)
+   */
+  static async sendBroadcastNotification(
+    adminId: string,
+    title: string,
+    message: string,
+    targetAudience: 'all' | 'admins' | 'moderators' | 'users'
+  ) {
+    try {
+      // Get target users based on audience
+      let targetUserIds: string[] = [];
+
+      if (targetAudience === 'all') {
+        // Get all active users
+        const users = await prisma.user.findMany({
+          where: { isActive: true },
+          select: { id: true },
+        });
+        targetUserIds = users.map((u) => u.id);
+      } else {
+        // Get users with specific roles
+        const roleMap: Record<string, Role[]> = {
+          admins: [Role.ADMIN],
+          moderators: [Role.MODERATOR],
+          users: [Role.USER],
+        };
+
+        const roles = roleMap[targetAudience] || [];
+
+        const userRoles = await prisma.userRole.findMany({
+          where: {
+            role: { in: roles },
+          },
+          select: { userId: true },
+          distinct: ['userId'],
+        });
+
+        targetUserIds = userRoles.map((ur) => ur.userId);
+      }
+
+      // Remove admin from target list (don't send to self)
+      targetUserIds = targetUserIds.filter((id) => id !== adminId);
+
+      if (targetUserIds.length === 0) {
+        logger.warn('No target users found for broadcast', { targetAudience });
+        return { sent: 0, targetAudience };
+      }
+
+      // Create notifications in batch
+      const notifications = targetUserIds.map((userId) => ({
+        userId,
+        type: NotificationType.SYSTEM,
+        title,
+        message,
+        senderId: adminId,
+      }));
+
+      // Use createMany for better performance (batch insert)
+      await prisma.notification.createMany({
+        data: notifications,
+      });
+
+      logger.info('Broadcast notification sent', {
+        adminId,
+        targetAudience,
+        recipientCount: targetUserIds.length,
+      });
+
+      return {
+        sent: targetUserIds.length,
+        targetAudience,
+      };
+    } catch (error) {
+      logger.error('Error sending broadcast notification', { error, adminId, targetAudience });
+      throw error;
+    }
+  }
+
+  /**
+   * Get broadcast notification history (for admin panel)
+   */
+  static async getBroadcastHistory(page: number = 1, limit: number = 50) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    // Get SYSTEM notifications sent by admins/moderators
+    const [notifications, total] = await Promise.all([
+      prisma.notification.findMany({
+        where: {
+          type: NotificationType.SYSTEM,
+          senderId: { not: null },
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+        distinct: ['title', 'message', 'senderId'], // Group similar notifications
+      }),
+      prisma.notification.count({
+        where: {
+          type: NotificationType.SYSTEM,
+          senderId: { not: null },
+        },
+      }),
+    ]);
+
+    // Get stats for each notification (how many sent, how many read)
+    const notificationsWithStats = await Promise.all(
+      notifications.map(async (notification) => {
+        const stats = await prisma.notification.aggregate({
+          where: {
+            title: notification.title,
+            message: notification.message,
+            senderId: notification.senderId,
+            type: NotificationType.SYSTEM,
+          },
+          _count: {
+            id: true,
+          },
+        });
+
+        const readCount = await prisma.notification.count({
+          where: {
+            title: notification.title,
+            message: notification.message,
+            senderId: notification.senderId,
+            type: NotificationType.SYSTEM,
+            read: true,
+          },
+        });
+
+        return {
+          ...notification,
+          stats: {
+            totalSent: stats._count.id,
+            totalRead: readCount,
+          },
+        };
+      })
+    );
+
+    return {
+      notifications: notificationsWithStats,
+      meta: createPaginationMeta({ total, page, limit }),
+    };
+  }
+
+  /**
+   * Delete old notifications (cleanup task)
+   */
+  static async deleteOldNotifications(daysOld: number = 90) {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - daysOld);
 
-    const deleted = await prisma.notification.deleteMany({
+    const result = await prisma.notification.deleteMany({
       where: {
         createdAt: { lt: cutoffDate },
-        read: true,
+        read: true, // Only delete read notifications
       },
     });
 
-    logger.info(`Deleted ${deleted.count} old notifications`);
+    logger.info(`Deleted ${result.count} old notifications`);
+    return result.count;
   }
 }
-
-
