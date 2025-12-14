@@ -26,5 +26,16 @@ router.post(
   ModeratorController.takeAction
 );
 
+// Reported Posts and Comments
+router.get('/moderator/posts/reported', ...moderatorAuth, ModeratorController.getReportedPosts);
+router.get('/moderator/comments/reported', ...moderatorAuth, ModeratorController.getReportedComments);
+
+// Reports Management
+router.get('/moderator/reports', ...moderatorAuth, ModeratorController.getReports);
+router.post('/moderator/reports/:id/resolve', ...moderatorAuth, ModeratorController.resolveReport);
+
+// History
+router.get('/moderator/history', ...moderatorAuth, ModeratorController.getHistory);
+
 export default router;
 

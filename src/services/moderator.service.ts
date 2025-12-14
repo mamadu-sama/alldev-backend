@@ -450,5 +450,426 @@ export class ModeratorService {
 
     return uniqueItems;
   }
+
+  /**
+   * Get reported posts with moderation details
+   */
+  static async getReportedPosts(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    status?: 'visible' | 'hidden' | 'all'
+  ) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    // Build where clause
+    const where: any = {};
+
+    // Only get posts that have pending reports
+    where.reports = {
+      some: {
+        status: ReportStatus.PENDING,
+      },
+    };
+
+    if (status && status !== 'all') {
+      where.isHidden = status === 'hidden';
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { author: { username: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({
+        where,
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          _count: {
+            select: {
+              reports: {
+                where: { status: ReportStatus.PENDING },
+              },
+            },
+          },
+        },
+        orderBy: {
+          reports: {
+            _count: 'desc', // Posts with more reports first
+          },
+        },
+        skip,
+        take,
+      }),
+      prisma.post.count({ where }),
+    ]);
+
+    const data = posts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      content: post.content.slice(0, 200), // Preview only
+      slug: post.slug,
+      author: post.author,
+      reports: post._count.reports,
+      status: post.isHidden ? 'hidden' : 'visible',
+      createdAt: post.createdAt,
+    }));
+
+    const meta = createPaginationMeta({ total, page, limit });
+    return { data, meta };
+  }
+
+  /**
+   * Get reported comments with moderation details
+   */
+  static async getReportedComments(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    status?: 'visible' | 'hidden' | 'all'
+  ) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    // Build where clause
+    const where: any = {};
+
+    // Only get comments that have pending reports
+    where.reports = {
+      some: {
+        status: ReportStatus.PENDING,
+      },
+    };
+
+    if (status && status !== 'all') {
+      // Assuming comments don't have isHidden field, we'll need to add it later if needed
+      // For now, we'll just filter by all
+    }
+
+    if (search) {
+      where.OR = [
+        { content: { contains: search, mode: 'insensitive' } },
+        { author: { username: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [comments, total] = await Promise.all([
+      prisma.comment.findMany({
+        where,
+        include: {
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          post: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+            },
+          },
+          _count: {
+            select: {
+              reports: {
+                where: { status: ReportStatus.PENDING },
+              },
+            },
+          },
+        },
+        orderBy: {
+          reports: {
+            _count: 'desc', // Comments with more reports first
+          },
+        },
+        skip,
+        take,
+      }),
+      prisma.comment.count({ where }),
+    ]);
+
+    const data = comments.map((comment) => ({
+      id: comment.id,
+      content: comment.content.slice(0, 200), // Preview only
+      postTitle: comment.post.title,
+      postId: comment.postId,
+      postSlug: comment.post.slug,
+      author: comment.author,
+      reports: comment._count.reports,
+      status: 'visible', // Comments don't have hidden status yet
+      createdAt: comment.createdAt,
+    }));
+
+    const meta = createPaginationMeta({ total, page, limit });
+    return { data, meta };
+  }
+
+  /**
+   * Get all reports with filters (for reports management page)
+   */
+  static async getReports(
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    status?: ReportStatus,
+    type?: 'post' | 'comment' | 'all'
+  ) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    // Build where clause
+    const where: any = {};
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (type && type !== 'all') {
+      if (type === 'post') {
+        where.postId = { not: null };
+      } else if (type === 'comment') {
+        where.commentId = { not: null };
+      }
+    }
+
+    if (search) {
+      where.OR = [
+        { reason: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { reporter: { username: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [reports, total] = await Promise.all([
+      prisma.report.findMany({
+        where,
+        include: {
+          reporter: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          post: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              author: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+            },
+          },
+          comment: {
+            select: {
+              id: true,
+              content: true,
+              author: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+            },
+          },
+          resolvedBy: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.report.count({ where }),
+    ]);
+
+    const data = reports.map((report) => ({
+      id: report.id,
+      type: report.postId ? 'post' : 'comment',
+      reason: report.reason,
+      description: report.description,
+      reportedBy: report.reporter,
+      target: {
+        id: report.postId || report.commentId,
+        title: report.post?.title,
+        content: report.comment?.content?.slice(0, 100),
+        username: report.post?.author.username || report.comment?.author.username,
+      },
+      status: report.status.toLowerCase(),
+      resolvedBy: report.resolvedBy,
+      resolvedAt: report.resolvedAt,
+      resolverNotes: report.resolverNotes,
+      createdAt: report.createdAt,
+    }));
+
+    const meta = createPaginationMeta({ total, page, limit });
+    return { data, meta };
+  }
+
+  /**
+   * Resolve or dismiss a report
+   */
+  static async resolveReport(
+    moderatorId: string,
+    reportId: string,
+    action: 'resolve' | 'dismiss' | 'escalate',
+    notes?: string
+  ) {
+    const report = await prisma.report.findUnique({
+      where: { id: reportId },
+    });
+
+    if (!report) {
+      throw new NotFoundError('Denúncia não encontrada.');
+    }
+
+    const newStatus =
+      action === 'resolve'
+        ? ReportStatus.RESOLVED
+        : action === 'dismiss'
+        ? ReportStatus.DISMISSED
+        : ReportStatus.ESCALATED;
+
+    await prisma.report.update({
+      where: { id: reportId },
+      data: {
+        status: newStatus,
+        resolvedById: moderatorId,
+        resolvedAt: new Date(),
+        resolverNotes: notes,
+      },
+    });
+
+    logger.info(`Report ${reportId} ${action}d by moderator ${moderatorId}`, {
+      reportId,
+      moderatorId,
+      action,
+      notes,
+    });
+  }
+
+  /**
+   * Get moderator action history
+   */
+  static async getModeratorHistory(
+    moderatorId: string,
+    page: number = 1,
+    limit: number = 20,
+    search?: string,
+    actionType?: ModeratorActionType
+  ) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    // Build where clause
+    const where: any = {
+      moderatorId,
+    };
+
+    if (actionType) {
+      where.actionType = actionType;
+    }
+
+    if (search) {
+      where.OR = [
+        { reason: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+        { post: { title: { contains: search, mode: 'insensitive' } } },
+        { comment: { content: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [actions, total] = await Promise.all([
+      prisma.moderatorAction.findMany({
+        where,
+        include: {
+          moderator: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          post: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+              author: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+            },
+          },
+          comment: {
+            select: {
+              id: true,
+              content: true,
+              author: {
+                select: {
+                  id: true,
+                  username: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.moderatorAction.count({ where }),
+    ]);
+
+    // Calculate stats for this moderator
+    const [totalActions, approveCount, hidePostCount, deletePostCount, deleteCommentCount, warnCount] = await Promise.all([
+      prisma.moderatorAction.count({ where: { moderatorId } }),
+      prisma.moderatorAction.count({ where: { moderatorId, actionType: ModeratorActionType.APPROVE_CONTENT } }),
+      prisma.moderatorAction.count({ where: { moderatorId, actionType: ModeratorActionType.HIDE_POST } }),
+      prisma.moderatorAction.count({ where: { moderatorId, actionType: ModeratorActionType.DELETE_POST } }),
+      prisma.moderatorAction.count({ where: { moderatorId, actionType: ModeratorActionType.DELETE_COMMENT } }),
+      prisma.moderatorAction.count({ where: { moderatorId, actionType: ModeratorActionType.WARN_USER } }),
+    ]);
+
+    const data = actions.map((action) => ({
+      id: action.id,
+      actionType: action.actionType,
+      reason: action.reason,
+      notes: action.notes,
+      targetType: action.postId ? 'POST' : action.commentId ? 'COMMENT' : 'USER',
+      targetTitle: action.post?.title || action.comment?.content?.slice(0, 50) || 'Ação de usuário',
+      targetAuthor: action.post?.author.username || action.comment?.author.username || 'N/A',
+      postSlug: action.post?.slug,
+      createdAt: action.createdAt,
+    }));
+
+    const stats = {
+      total: totalActions,
+      approved: approveCount,
+      hidden: hidePostCount,
+      deleted: deletePostCount + deleteCommentCount,
+      warnings: warnCount,
+    };
+
+    const meta = createPaginationMeta({ total, page, limit });
+    return { data, meta, stats };
+  }
 }
 

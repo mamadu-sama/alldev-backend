@@ -118,6 +118,7 @@ model User {
   sentNotifications        Notification[]             @relation("SentNotifications")
   reports                  Report[]                   @relation("Reporter")
   reportedContent          Report[]                   @relation("ReportedUser")
+  resolvedReports          Report[]                   @relation("ReportResolver")
   moderatorActions         ModeratorAction[]
   refreshTokens            RefreshToken[]
   passwordResets           PasswordReset[]
@@ -309,6 +310,7 @@ model Report {
   post         Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   comment      Comment? @relation(fields: [commentId], references: [id], onDelete: Cascade)
   reportedUser User?    @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  resolvedBy   User?    @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([createdAt])
