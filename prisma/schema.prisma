@@ -337,3 +337,37 @@ model EmailVerification {
   @@map("email_verifications")
 }
 
+enum ContactStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ContactReason {
+  GENERAL
+  BUG
+  SUGGESTION
+  SECURITY
+  PARTNERSHIP
+  PRESS
+}
+
+model ContactMessage {
+  id        String        @id @default(uuid())
+  name      String
+  email     String
+  reason    String
+  subject   String
+  message   String        @db.Text
+  ip        String?
+  status    String        @default("PENDING")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
+

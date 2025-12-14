@@ -43,3 +43,17 @@ export const strictRateLimiter = rateLimit({
   },
 });
 
+export const contactRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Maximum 3 contact messages per hour per IP
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Muitas tentativas de contato. Tente novamente em 1 hora.',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
