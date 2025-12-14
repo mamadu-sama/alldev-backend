@@ -4,12 +4,13 @@ import { authenticate } from '@/middleware/auth.middleware';
 import { requireRole } from '@/middleware/role.middleware';
 import { validate } from '@/middleware/validate.middleware';
 import { banUserSchema, updateMaintenanceModeSchema } from '@/schemas/moderation.schema';
+import { Role } from '@prisma/client';
 import { z } from 'zod';
 
 const router = Router();
 
 // All routes require admin role
-const adminAuth = [authenticate, requireRole(['ADMIN'])];
+const adminAuth = [authenticate, requireRole(Role.ADMIN)];
 
 // User management
 router.get('/admin/users', ...adminAuth, AdminController.getAllUsers);
@@ -36,8 +37,10 @@ router.post(
   AdminController.updateMaintenanceMode
 );
 
-// Statistics
+// Statistics and Dashboard
 router.get('/admin/statistics', ...adminAuth, AdminController.getStatistics);
+router.get('/admin/recent-posts', ...adminAuth, AdminController.getRecentPosts);
+router.get('/admin/recent-users', ...adminAuth, AdminController.getRecentUsers);
 
 export default router;
 

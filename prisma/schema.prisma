@@ -48,10 +48,9 @@ enum ReportStatus {
 
 enum ReportReason {
   SPAM
-  HARASSMENT
   INAPPROPRIATE
-  OFF_TOPIC
-  DUPLICATE
+  OFFENSIVE
+  MISINFORMATION
   OTHER
 }
 

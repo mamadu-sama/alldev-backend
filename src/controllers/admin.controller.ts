@@ -129,6 +129,34 @@ export class AdminController {
       next(error);
     }
   }
+
+  static async getRecentPosts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const posts = await AdminService.getRecentPosts(limit);
+
+      res.json({
+        success: true,
+        data: posts,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getRecentUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const users = await AdminService.getRecentUsers(limit);
+
+      res.json({
+        success: true,
+        data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 

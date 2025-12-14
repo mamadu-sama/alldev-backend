@@ -234,14 +234,17 @@ export class AdminService {
       totalPosts,
       totalComments,
       totalTags,
+      pendingReports,
       recentUsers,
       recentPosts,
+      totalViews,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { isActive: true } }),
       prisma.post.count(),
       prisma.comment.count(),
       prisma.tag.count(),
+      prisma.report.count({ where: { status: 'PENDING' } }),
       prisma.user.count({
         where: {
           createdAt: {
@@ -254,6 +257,11 @@ export class AdminService {
           createdAt: {
             gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
           },
+        },
+      }),
+      prisma.post.aggregate({
+        _sum: {
+          views: true,
         },
       }),
     ]);
@@ -274,7 +282,53 @@ export class AdminService {
       tags: {
         total: totalTags,
       },
+      reports: {
+        pending: pendingReports,
+      },
+      views: {
+        total: totalViews._sum.views || 0,
+      },
     };
+  }
+
+  static async getRecentPosts(limit: number = 10) {
+    return await prisma.post.findMany({
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        createdAt: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            comments: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+  }
+
+  static async getRecentUsers(limit: number = 10) {
+    return await prisma.user.findMany({
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        avatarUrl: true,
+        level: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
   }
 }
 

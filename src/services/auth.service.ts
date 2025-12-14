@@ -130,6 +130,7 @@ export class AuthService {
         skills: user.skills,
         reputation: user.reputation,
         level: user.level,
+        roles: user.roles.map((r) => r.role),
         isVerified: user.isVerified,
         createdAt: user.createdAt,
       },
