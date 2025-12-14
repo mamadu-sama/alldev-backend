@@ -11,6 +11,7 @@ import reportRoutes from './report.routes';
 import moderationRoutes from './moderation.routes';
 import adminRoutes from './admin.routes';
 import contactRoutes from './contact.routes';
+import featureRequestRoutes from './feature-request.routes';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use('/', reportRoutes);
 router.use('/', moderationRoutes);
 router.use('/', adminRoutes);
 router.use('/contact', contactRoutes);
+router.use('/', featureRequestRoutes);
 
 export default router;
 

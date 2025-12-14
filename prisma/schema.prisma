@@ -54,6 +54,28 @@ enum ReportReason {
   OTHER
 }
 
+enum FeatureRequestStatus {
+  PENDING
+  REVIEWING
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+}
+
+enum FeatureRequestCategory {
+  INTERFACE
+  FUNCIONALIDADES
+  INTEGRACOES
+  COMUNIDADE
+  NOTIFICACOES
+  MOBILE
+  GAMIFICACAO
+  ACESSIBILIDADE
+  PERFORMANCE
+  SEGURANCA
+}
+
 // ============================================
 // MODELS
 // ============================================
@@ -75,18 +97,21 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at")
 
   // Relations
-  socialLinks       SocialLinks?
-  roles             UserRole[]
-  posts             Post[]
-  comments          Comment[]
-  votes             Vote[]
-  notifications     Notification[]
-  sentNotifications Notification[]    @relation("SentNotifications")
-  reports           Report[]          @relation("Reporter")
-  reportedContent   Report[]          @relation("ReportedUser")
-  moderatorActions  ModeratorAction[]
-  refreshTokens     RefreshToken[]
-  passwordResets    PasswordReset[]
+  socialLinks              SocialLinks?
+  roles                    UserRole[]
+  posts                    Post[]
+  comments                 Comment[]
+  votes                    Vote[]
+  notifications            Notification[]
+  sentNotifications        Notification[]             @relation("SentNotifications")
+  reports                  Report[]                   @relation("Reporter")
+  reportedContent          Report[]                   @relation("ReportedUser")
+  moderatorActions         ModeratorAction[]
+  refreshTokens            RefreshToken[]
+  passwordResets           PasswordReset[]
+  featureRequests          FeatureRequest[]
+  featureRequestVotes      FeatureRequestVote[]       @relation("FeatureRequestVotes")
+  featureRequestComments   FeatureRequestComment[]    @relation("FeatureRequestComments")
 
   @@index([username])
   @@index([email])
@@ -396,5 +421,60 @@ model ContactMessage {
   @@index([status])
   @@index([createdAt])
   @@map("contact_messages")
+}
+
+model FeatureRequest {
+  id          String                   @id @default(uuid())
+  title       String
+  description String                   @db.Text
+  category    FeatureRequestCategory
+  status      FeatureRequestStatus     @default(PENDING)
+  authorId    String                   @map("author_id")
+  voteCount   Int                      @default(0) @map("vote_count")
+  commentCount Int                     @default(0) @map("comment_count")
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+
+  author   User                      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes    FeatureRequestVote[]
+  comments FeatureRequestComment[]
+
+  @@index([authorId])
+  @@index([status])
+  @@index([category])
+  @@index([voteCount])
+  @@index([createdAt])
+  @@map("feature_requests")
+}
+
+model FeatureRequestVote {
+  id               String   @id @default(uuid())
+  featureRequestId String   @map("feature_request_id")
+  userId           String   @map("user_id")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  featureRequest FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  user           User           @relation("FeatureRequestVotes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([featureRequestId, userId])
+  @@index([userId])
+  @@map("feature_request_votes")
+}
+
+model FeatureRequestComment {
+  id               String   @id @default(uuid())
+  featureRequestId String   @map("feature_request_id")
+  authorId         String   @map("author_id")
+  content          String   @db.Text
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  featureRequest FeatureRequest @relation(fields: [featureRequestId], references: [id], onDelete: Cascade)
+  author         User           @relation("FeatureRequestComments", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([featureRequestId])
+  @@index([authorId])
+  @@index([createdAt])
+  @@map("feature_request_comments")
 }
 
