@@ -157,6 +157,101 @@ export class AdminController {
       next(error);
     }
   }
+
+  // Posts Management
+  static async getAllPosts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const result = await AdminService.getAllPosts(page, limit);
+
+      res.json({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deletePost(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { postId } = req.params;
+      const adminId = req.user!.id;
+
+      await AdminService.deletePost(adminId, postId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async hidePost(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { postId } = req.params;
+      const { reason } = req.body;
+      const adminId = req.user!.id;
+
+      await AdminService.hidePost(adminId, postId, reason);
+
+      res.json({
+        success: true,
+        message: 'Post ocultado com sucesso',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unhidePost(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { postId } = req.params;
+      const adminId = req.user!.id;
+
+      await AdminService.unhidePost(adminId, postId);
+
+      res.json({
+        success: true,
+        message: 'Post publicado com sucesso',
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Comments Management
+  static async getAllComments(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const result = await AdminService.getAllComments(page, limit);
+
+      res.json({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteComment(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { commentId } = req.params;
+      const adminId = req.user!.id;
+
+      await AdminService.deleteComment(adminId, commentId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 

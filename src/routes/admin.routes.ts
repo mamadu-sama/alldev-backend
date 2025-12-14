@@ -42,6 +42,21 @@ router.get('/admin/statistics', ...adminAuth, AdminController.getStatistics);
 router.get('/admin/recent-posts', ...adminAuth, AdminController.getRecentPosts);
 router.get('/admin/recent-users', ...adminAuth, AdminController.getRecentUsers);
 
+// Posts Management
+router.get('/admin/posts', ...adminAuth, AdminController.getAllPosts);
+router.delete('/admin/posts/:postId', ...adminAuth, AdminController.deletePost);
+router.post(
+  '/admin/posts/:postId/hide',
+  ...adminAuth,
+  validate(z.object({ reason: z.string().min(5, 'Motivo deve ter no mínimo 5 caracteres') })),
+  AdminController.hidePost
+);
+router.post('/admin/posts/:postId/unhide', ...adminAuth, AdminController.unhidePost);
+
+// Comments Management
+router.get('/admin/comments', ...adminAuth, AdminController.getAllComments);
+router.delete('/admin/comments/:commentId', ...adminAuth, AdminController.deleteComment);
+
 export default router;
 
 

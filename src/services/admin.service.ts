@@ -354,6 +354,224 @@ export class AdminService {
       take: limit,
     });
   }
+
+  // Posts Management
+  static async getAllPosts(page: number = 1, limit: number = 50) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    const [posts, total] = await Promise.all([
+      prisma.post.findMany({
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          votes: true,
+          views: true,
+          commentCount: true,
+          hasAcceptedAnswer: true,
+          isHidden: true,
+          isLocked: true,
+          createdAt: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          tags: {
+            include: {
+              tag: {
+                select: {
+                  id: true,
+                  name: true,
+                  slug: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.post.count(),
+    ]);
+
+    return {
+      data: posts,
+      meta: createPaginationMeta(page, limit, total),
+    };
+  }
+
+  static async deletePost(adminId: string, postId: string) {
+    const post = await prisma.post.findUnique({
+      where: { id: postId },
+      include: { author: { include: { roles: true } } },
+    });
+
+    if (!post) {
+      throw new NotFoundError('Post não encontrado');
+    }
+
+    // Cannot delete admin's posts
+    if (post.author.roles.some(r => r.role === 'ADMIN')) {
+      throw new ValidationError('Não pode deletar posts de administradores');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Create moderator action BEFORE deleting post
+      await tx.moderatorAction.create({
+        data: {
+          moderatorId: adminId,
+          action: 'DELETE_POST',
+          reason: 'Post deleted by admin',
+          postId: postId,
+        },
+      });
+
+      // Delete post (will set postId to null in moderatorAction due to onDelete: SetNull)
+      await tx.post.delete({
+        where: { id: postId },
+      });
+    });
+
+    logger.warn(`Post deleted by admin`, {
+      adminId,
+      postId,
+      title: post.title,
+    });
+  }
+
+  static async hidePost(adminId: string, postId: string, reason: string) {
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) {
+      throw new NotFoundError('Post não encontrado');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.post.update({
+        where: { id: postId },
+        data: { isHidden: true },
+      });
+
+      await tx.moderatorAction.create({
+        data: {
+          moderatorId: adminId,
+          action: 'HIDE_POST',
+          reason,
+          postId: postId,
+        },
+      });
+    });
+
+    logger.info(`Post hidden by admin`, { adminId, postId, reason });
+  }
+
+  static async unhidePost(adminId: string, postId: string) {
+    const post = await prisma.post.findUnique({ where: { id: postId } });
+
+    if (!post) {
+      throw new NotFoundError('Post não encontrado');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.post.update({
+        where: { id: postId },
+        data: { isHidden: false },
+      });
+
+      await tx.moderatorAction.create({
+        data: {
+          moderatorId: adminId,
+          action: 'UNHIDE_POST',
+          reason: 'Post unhidden by admin',
+          postId: postId,
+        },
+      });
+    });
+
+    logger.info(`Post unhidden by admin`, { adminId, postId });
+  }
+
+  // Comments Management
+  static async getAllComments(page: number = 1, limit: number = 50) {
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    const [comments, total] = await Promise.all([
+      prisma.comment.findMany({
+        select: {
+          id: true,
+          content: true,
+          votes: true,
+          isAccepted: true,
+          createdAt: true,
+          author: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          post: {
+            select: {
+              id: true,
+              title: true,
+              slug: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take,
+      }),
+      prisma.comment.count(),
+    ]);
+
+    return {
+      data: comments,
+      meta: createPaginationMeta(page, limit, total),
+    };
+  }
+
+  static async deleteComment(adminId: string, commentId: string) {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+      include: { author: { include: { roles: true } } },
+    });
+
+    if (!comment) {
+      throw new NotFoundError('Comentário não encontrado');
+    }
+
+    // Cannot delete admin's comments
+    if (comment.author.roles.some(r => r.role === 'ADMIN')) {
+      throw new ValidationError('Não pode deletar comentários de administradores');
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Create moderator action BEFORE deleting comment
+      await tx.moderatorAction.create({
+        data: {
+          moderatorId: adminId,
+          action: 'DELETE_COMMENT',
+          reason: 'Comment deleted by admin',
+          commentId: commentId,
+        },
+      });
+
+      // Delete comment (will set commentId to null in moderatorAction due to onDelete: SetNull)
+      await tx.comment.delete({
+        where: { id: commentId },
+      });
+    });
+
+    logger.warn(`Comment deleted by admin`, {
+      adminId,
+      commentId,
+    });
+  }
 }
 
 
