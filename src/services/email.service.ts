@@ -2,6 +2,12 @@ import nodemailer from "nodemailer";
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 
+import { Resend } from "resend";
+
+/** 
+ use resend to send emails
+**/
+
 let transporter: nodemailer.Transporter | null = null;
 
 // Initialize transporter if SMTP is configured

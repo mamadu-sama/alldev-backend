@@ -12,3 +12,4 @@ router.post('/votes', authenticate, validate(voteSchema), VoteController.vote);
 export default router;
 
 
+

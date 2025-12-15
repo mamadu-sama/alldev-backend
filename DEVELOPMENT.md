@@ -311,3 +311,4 @@ npx prisma migrate deploy
 Para questões ou problemas, consulte a documentação ou contacte a equipa de desenvolvimento.
 
 
+
