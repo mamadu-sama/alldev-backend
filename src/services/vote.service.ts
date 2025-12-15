@@ -1,6 +1,7 @@
 import { prisma } from '@/config/database';
 import { VoteType } from '@prisma/client';
 import { ReputationService } from './reputation.service';
+import { NotificationService } from './notification.service';
 import { NotFoundError, ValidationError } from '@/types';
 
 export class VoteService {
@@ -209,6 +210,28 @@ export class VoteService {
     // Update author reputation
     if (reputationChange !== 0) {
       await ReputationService.updateReputation(comment.authorId, reputationChange);
+    }
+
+    // Send notification for upvotes (not for downvotes or vote removals)
+    if (voteType === 'UP' && voteDelta === 1) {
+      // Get voter information
+      const voter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true },
+      });
+
+      if (voter) {
+        // Send notification asynchronously (don't await)
+        NotificationService.notifyVote(
+          comment.authorId,
+          voter.username,
+          userId,
+          comment.postId,
+          true
+        ).catch((error) => {
+          console.error('Error sending vote notification:', error);
+        });
+      }
     }
 
     // Get updated comment
