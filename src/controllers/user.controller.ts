@@ -67,6 +67,40 @@ export class UserController {
     }
   }
 
+  static async uploadCoverImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'FILE_REQUIRED',
+            message: 'Nenhum ficheiro enviado',
+          },
+        });
+      }
+
+      const result = await UserService.uploadCoverImage(req.user!.id, req.file.buffer);
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteCoverImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      await UserService.deleteCoverImage(req.user!.id);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async getUserByUsername(req: Request, res: Response, next: NextFunction) {
     try {
       const { username } = req.params;

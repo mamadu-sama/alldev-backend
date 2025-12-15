@@ -22,6 +22,7 @@ export class UserService {
       username: user.username,
       email: user.email,
       avatarUrl: user.avatarUrl,
+      coverImageUrl: user.coverImageUrl,
       bio: user.bio,
       skills: user.skills,
       socialLinks: user.socialLinks
@@ -100,7 +101,17 @@ export class UserService {
   }
 
   static async uploadAvatar(userId: string, buffer: Buffer) {
-    const avatarUrl = await UploadService.uploadAvatar(buffer, userId);
+    // Get current avatar URL to delete old one
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+
+    const avatarUrl = await UploadService.uploadAvatar(
+      buffer,
+      userId,
+      user?.avatarUrl || undefined
+    );
 
     await prisma.user.update({
       where: { id: userId },
@@ -116,6 +127,43 @@ export class UserService {
     await prisma.user.update({
       where: { id: userId },
       data: { avatarUrl: null },
+    });
+  }
+
+  static async uploadCoverImage(userId: string, buffer: Buffer) {
+    // Get current cover image URL to delete old one
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { coverImageUrl: true },
+    });
+
+    const coverImageUrl = await UploadService.uploadCoverImage(
+      buffer,
+      userId,
+      user?.coverImageUrl || undefined
+    );
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { coverImageUrl },
+    });
+
+    return { coverImageUrl };
+  }
+
+  static async deleteCoverImage(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { coverImageUrl: true },
+    });
+
+    if (user?.coverImageUrl) {
+      await UploadService.deleteCoverImage(user.coverImageUrl);
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { coverImageUrl: null },
     });
   }
 
@@ -149,6 +197,7 @@ export class UserService {
       id: user.id,
       username: user.username,
       avatarUrl: user.avatarUrl,
+      coverImageUrl: user.coverImageUrl,
       bio: user.bio,
       skills: user.skills,
       socialLinks: user.socialLinks,

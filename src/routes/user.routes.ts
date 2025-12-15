@@ -26,6 +26,15 @@ router.post(
 
 router.delete('/me/avatar', authenticate, UserController.deleteAvatar);
 
+router.post(
+  '/me/cover',
+  authenticate,
+  upload.single('cover'),
+  UserController.uploadCoverImage
+);
+
+router.delete('/me/cover', authenticate, UserController.deleteCoverImage);
+
 // Public routes
 router.get('/:username', UserController.getUserByUsername);
 

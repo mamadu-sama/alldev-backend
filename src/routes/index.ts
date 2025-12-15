@@ -13,6 +13,7 @@ import adminRoutes from './admin.routes';
 import moderatorRoutes from './moderator.routes';
 import contactRoutes from './contact.routes';
 import featureRequestRoutes from './feature-request.routes';
+import statsRoutes from './stats.routes';
 
 const router = Router();
 
@@ -31,6 +32,7 @@ router.use('/', adminRoutes);
 router.use('/', moderatorRoutes);
 router.use('/contact', contactRoutes);
 router.use('/', featureRequestRoutes);
+router.use('/stats', statsRoutes);
 
 export default router;
 
