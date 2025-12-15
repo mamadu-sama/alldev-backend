@@ -314,4 +314,158 @@ export class NotificationService {
     logger.info(`Deleted ${result.count} old notifications`);
     return result.count;
   }
+
+  /**
+   * Notify user when someone comments on their post
+   */
+  static async notifyComment(
+    postAuthorId: string,
+    commenterUsername: string,
+    commenterId: string,
+    postId: string,
+    _postSlug: string,
+    commentId: string
+  ) {
+    // Don't notify if commenting on own post
+    if (postAuthorId === commenterId) {
+      return;
+    }
+
+    try {
+      await this.sendToUser(
+        postAuthorId,
+        NotificationType.COMMENT,
+        `${commenterUsername} comentou no seu post`,
+        {
+          senderId: commenterId,
+          relatedPostId: postId,
+          relatedCommentId: commentId,
+        }
+      );
+    } catch (error) {
+      logger.error("Error sending comment notification", {
+        error,
+        postAuthorId,
+        commenterId,
+      });
+    }
+  }
+
+  /**
+   * Notify user when someone replies to their comment
+   */
+  static async notifyReply(
+    parentCommentAuthorId: string,
+    replierUsername: string,
+    replierId: string,
+    postId: string,
+    commentId: string
+  ) {
+    // Don't notify if replying to own comment
+    if (parentCommentAuthorId === replierId) {
+      return;
+    }
+
+    try {
+      await this.sendToUser(
+        parentCommentAuthorId,
+        NotificationType.REPLY,
+        `${replierUsername} respondeu ao seu comentário`,
+        {
+          senderId: replierId,
+          relatedPostId: postId,
+          relatedCommentId: commentId,
+        }
+      );
+    } catch (error) {
+      logger.error("Error sending reply notification", {
+        error,
+        parentCommentAuthorId,
+        replierId,
+      });
+    }
+  }
+
+  /**
+   * Notify user when their answer is accepted
+   */
+  static async notifyAccepted(
+    commentAuthorId: string,
+    postId: string,
+    commentId: string,
+    postAuthorId: string
+  ) {
+    // Don't notify if accepting own answer
+    if (commentAuthorId === postAuthorId) {
+      return;
+    }
+
+    try {
+      // Get post author username
+      const postAuthor = await prisma.user.findUnique({
+        where: { id: postAuthorId },
+        select: { username: true },
+      });
+
+      if (!postAuthor) {
+        logger.error("Post author not found for accepted answer notification", {
+          postAuthorId,
+        });
+        return;
+      }
+
+      await this.sendToUser(
+        commentAuthorId,
+        NotificationType.ACCEPTED,
+        `${postAuthor.username} aceitou a sua resposta`,
+        {
+          senderId: postAuthorId,
+          relatedPostId: postId,
+          relatedCommentId: commentId,
+        }
+      );
+    } catch (error) {
+      logger.error("Error sending accepted answer notification", {
+        error,
+        commentAuthorId,
+        postAuthorId,
+      });
+    }
+  }
+
+  /**
+   * Notify user when someone votes on their content (aggregated)
+   */
+  static async notifyVote(
+    contentAuthorId: string,
+    voterUsername: string,
+    voterId: string,
+    postId: string,
+    isUpvote: boolean
+  ) {
+    // Don't notify for downvotes or self-votes
+    if (!isUpvote || contentAuthorId === voterId) {
+      return;
+    }
+
+    try {
+      // For now, send individual notifications
+      // TODO: Implement vote aggregation (e.g., "5 people upvoted your post")
+      await this.sendToUser(
+        contentAuthorId,
+        NotificationType.VOTE,
+        `${voterUsername} votou positivamente no seu conteúdo`,
+        {
+          senderId: voterId,
+          relatedPostId: postId,
+        }
+      );
+    } catch (error) {
+      logger.error("Error sending vote notification", {
+        error,
+        contentAuthorId,
+        voterId,
+      });
+    }
+  }
 }

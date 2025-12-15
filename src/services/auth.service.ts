@@ -1,25 +1,33 @@
-import { v4 as uuidv4 } from 'uuid';
-import { prisma } from '@/config/database';
-import { hashPassword, comparePassword } from '@/utils/password';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
-import { EmailService } from './email.service';
+import { v4 as uuidv4 } from "uuid";
+import { prisma } from "@/config/database";
+import { hashPassword, comparePassword } from "@/utils/password";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "@/utils/jwt";
+import { EmailService } from "./email.service";
 import {
   ValidationError,
   AuthenticationError,
   ConflictError,
   NotFoundError,
-} from '@/types';
-import { Role } from '@prisma/client';
+} from "@/types";
+import { Role } from "@prisma/client";
 
 export class AuthService {
-  static async register(data: { username: string; email: string; password: string }) {
+  static async register(data: {
+    username: string;
+    email: string;
+    password: string;
+  }) {
     // Check if email already exists
     const existingEmail = await prisma.user.findUnique({
       where: { email: data.email },
     });
 
     if (existingEmail) {
-      throw new ConflictError('Email já está em uso');
+      throw new ConflictError("Email já está em uso");
     }
 
     // Check if username already exists
@@ -28,7 +36,7 @@ export class AuthService {
     });
 
     if (existingUsername) {
-      throw new ConflictError('Username já está em uso');
+      throw new ConflictError("Username já está em uso");
     }
 
     // Hash password
@@ -80,19 +88,19 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new AuthenticationError('Email ou password incorretos');
+      throw new AuthenticationError("Email ou password incorretos");
     }
 
     // Check if user is active
     if (!user.isActive) {
-      throw new AuthenticationError('Conta desativada');
+      throw new AuthenticationError("Conta desativada");
     }
 
     // Verify password
     const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
-      throw new AuthenticationError('Email ou password incorretos');
+      throw new AuthenticationError("Email ou password incorretos");
     }
 
     // Update last login
@@ -150,11 +158,11 @@ export class AuthService {
       });
 
       if (!storedToken) {
-        throw new AuthenticationError('Token inválido');
+        throw new AuthenticationError("Token inválido");
       }
 
       if (!storedToken.user.isActive) {
-        throw new AuthenticationError('Conta desativada');
+        throw new AuthenticationError("Conta desativada");
       }
 
       // Generate new tokens
@@ -165,7 +173,10 @@ export class AuthService {
       });
 
       const newTokenId = uuidv4();
-      const newRefreshToken = generateRefreshToken(storedToken.user.id, newTokenId);
+      const newRefreshToken = generateRefreshToken(
+        storedToken.user.id,
+        newTokenId
+      );
 
       // Delete old refresh token and create new one
       await prisma.$transaction([
@@ -184,7 +195,7 @@ export class AuthService {
         refreshToken: newRefreshToken,
       };
     } catch (error) {
-      throw new AuthenticationError('Token inválido ou expirado');
+      throw new AuthenticationError("Token inválido ou expirado");
     }
   }
 
@@ -225,15 +236,15 @@ export class AuthService {
     });
 
     if (!resetRecord) {
-      throw new NotFoundError('Token inválido');
+      throw new NotFoundError("Token inválido");
     }
 
     if (resetRecord.used) {
-      throw new ValidationError('Token já foi utilizado');
+      throw new ValidationError("Token já foi utilizado");
     }
 
     if (resetRecord.expiresAt < new Date()) {
-      throw new ValidationError('Token expirado');
+      throw new ValidationError("Token expirado");
     }
 
     // Hash new password
@@ -259,42 +270,85 @@ export class AuthService {
   static async verifyEmail(token: string) {
     const verification = await prisma.emailVerification.findUnique({
       where: { token },
+      include: {
+        user: {
+          select: {
+            id: true,
+            isVerified: true,
+          },
+        },
+      },
     });
 
     if (!verification) {
-      throw new NotFoundError('Token inválido');
+      throw new NotFoundError("Token inválido ou já foi utilizado");
     }
 
     if (verification.expiresAt < new Date()) {
-      throw new ValidationError('Token expirado');
+      throw new ValidationError("Token expirado");
+    }
+
+    // Check if user is already verified
+    if (verification.user.isVerified) {
+      // User is already verified, just delete the token
+      await prisma.emailVerification.deleteMany({
+        where: { userId: verification.userId },
+      });
+      return; // Exit successfully
     }
 
     // Mark user as verified and delete token
-    await prisma.$transaction([
-      prisma.user.update({
+    try {
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: verification.userId },
+          data: { isVerified: true },
+        }),
+        prisma.emailVerification.deleteMany({
+          where: { userId: verification.userId },
+        }),
+      ]);
+    } catch (error) {
+      // If transaction fails, check if user was verified in a concurrent request
+      const user = await prisma.user.findUnique({
         where: { id: verification.userId },
-        data: { isVerified: true },
-      }),
-      prisma.emailVerification.delete({
-        where: { token },
-      }),
-    ]);
+        select: { isVerified: true },
+      });
+
+      if (user?.isVerified) {
+        // User was verified by another request, clean up tokens
+        await prisma.emailVerification.deleteMany({
+          where: { userId: verification.userId },
+        });
+        return; // Exit successfully
+      }
+
+      // If not verified, re-throw the error
+      throw error;
+    }
   }
 
-  static async changePassword(userId: string, currentPassword: string, newPassword: string) {
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     // Verify current password
-    const isPasswordValid = await comparePassword(currentPassword, user.passwordHash);
+    const isPasswordValid = await comparePassword(
+      currentPassword,
+      user.passwordHash
+    );
 
     if (!isPasswordValid) {
-      throw new AuthenticationError('Password atual incorreta');
+      throw new AuthenticationError("Password atual incorreta");
     }
 
     // Hash new password
@@ -312,4 +366,3 @@ export class AuthService {
     });
   }
 }
-
