@@ -1,7 +1,7 @@
-import { PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
-import sharp from 'sharp';
-import { s3Client, s3Config } from '@/config/aws';
-import { logger } from '@/utils/logger';
+import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import sharp from "sharp";
+import { s3Client, s3Config } from "@/config/aws";
+import { logger } from "@/utils/logger";
 
 export class UploadService {
   /**
@@ -10,8 +10,8 @@ export class UploadService {
   private static async deleteFileByUrl(fileUrl: string): Promise<void> {
     try {
       // Extract key from URL
-      const key = fileUrl.replace(`${s3Config.baseUrl}/`, '');
-      
+      const key = fileUrl.replace(`${s3Config.baseUrl}/`, "");
+
       const command = new DeleteObjectCommand({
         Bucket: s3Config.bucketName,
         Key: key,
@@ -20,12 +20,16 @@ export class UploadService {
       await s3Client.send(command);
       logger.info(`File deleted: ${key}`);
     } catch (error) {
-      logger.error('Failed to delete file:', error);
+      logger.error("Failed to delete file:", error);
       // Don't throw error if delete fails (file might not exist)
     }
   }
 
-  static async uploadAvatar(buffer: Buffer, userId: string, oldAvatarUrl?: string): Promise<string> {
+  static async uploadAvatar(
+    buffer: Buffer,
+    userId: string,
+    oldAvatarUrl?: string
+  ): Promise<string> {
     try {
       // Delete old avatar if exists
       if (oldAvatarUrl) {
@@ -34,7 +38,7 @@ export class UploadService {
 
       // Process image with Sharp
       const processedImage = await sharp(buffer)
-        .resize(200, 200, { fit: 'cover' })
+        .resize(200, 200, { fit: "cover" })
         .webp({ quality: 80 })
         .toBuffer();
 
@@ -45,8 +49,8 @@ export class UploadService {
         Bucket: s3Config.bucketName,
         Key: key,
         Body: processedImage,
-        ContentType: 'image/webp',
-        ACL: 'public-read',
+        ContentType: "image/webp",
+        ACL: "public-read",
       });
 
       await s3Client.send(command);
@@ -56,12 +60,16 @@ export class UploadService {
 
       return avatarUrl;
     } catch (error) {
-      logger.error('Failed to upload avatar:', error);
-      throw new Error('Falha ao fazer upload do avatar');
+      logger.error("Failed to upload avatar:", error);
+      throw new Error("Falha ao fazer upload do avatar");
     }
   }
 
-  static async uploadCoverImage(buffer: Buffer, userId: string, oldCoverUrl?: string): Promise<string> {
+  static async uploadCoverImage(
+    buffer: Buffer,
+    userId: string,
+    oldCoverUrl?: string
+  ): Promise<string> {
     try {
       // Delete old cover image if exists
       if (oldCoverUrl) {
@@ -70,7 +78,7 @@ export class UploadService {
 
       // Process image with Sharp - wider format for cover
       const processedImage = await sharp(buffer)
-        .resize(1200, 400, { fit: 'cover' })
+        .resize(1200, 400, { fit: "cover" })
         .webp({ quality: 85 })
         .toBuffer();
 
@@ -81,8 +89,8 @@ export class UploadService {
         Bucket: s3Config.bucketName,
         Key: key,
         Body: processedImage,
-        ContentType: 'image/webp',
-        ACL: 'public-read',
+        ContentType: "image/webp",
+        ACL: "public-read",
       });
 
       await s3Client.send(command);
@@ -92,8 +100,8 @@ export class UploadService {
 
       return coverUrl;
     } catch (error) {
-      logger.error('Failed to upload cover image:', error);
-      throw new Error('Falha ao fazer upload da imagem de capa');
+      logger.error("Failed to upload cover image:", error);
+      throw new Error("Falha ao fazer upload da imagem de capa");
     }
   }
 
@@ -108,7 +116,7 @@ export class UploadService {
       await s3Client.send(command);
       logger.info(`Avatar deleted for user ${userId}`);
     } catch (error) {
-      logger.error('Failed to delete avatar:', error);
+      logger.error("Failed to delete avatar:", error);
       // Don't throw error if delete fails (avatar might not exist)
     }
   }
@@ -117,9 +125,101 @@ export class UploadService {
     try {
       await this.deleteFileByUrl(coverUrl);
     } catch (error) {
-      logger.error('Failed to delete cover image:', error);
+      logger.error("Failed to delete cover image:", error);
       // Don't throw error if delete fails
     }
   }
-}
 
+  /**
+   * Upload content image (for posts/comments)
+   * Allows screenshots and images only
+   */
+  static async uploadContentImage(
+    buffer: Buffer,
+    userId: string,
+    filename: string,
+    mimetype: string
+  ): Promise<string> {
+    try {
+      // Validate file type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/jpg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+      ];
+      if (!allowedTypes.includes(mimetype)) {
+        throw new Error(
+          "Tipo de arquivo não permitido. Apenas imagens são aceitas."
+        );
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (buffer.length > maxSize) {
+        throw new Error("Arquivo muito grande. Tamanho máximo: 5MB");
+      }
+
+      // Get image metadata
+      const metadata = await sharp(buffer).metadata();
+
+      // Process image - maintain aspect ratio, max width 1200px
+      let processedImage = sharp(buffer);
+
+      if (metadata.width && metadata.width > 1200) {
+        processedImage = processedImage.resize(1200, null, {
+          fit: "inside",
+          withoutEnlargement: true,
+        });
+      }
+
+      // Convert to WebP for better compression (except GIFs)
+      if (mimetype === "image/gif") {
+        // Keep GIFs as is (animations)
+        processedImage = processedImage.gif();
+      } else {
+        processedImage = processedImage.webp({ quality: 85 });
+      }
+
+      const finalBuffer = await processedImage.toBuffer();
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(7);
+      const extension = mimetype === "image/gif" ? "gif" : "webp";
+      const key = `content/${userId}/${timestamp}-${randomString}.${extension}`;
+
+      const command = new PutObjectCommand({
+        Bucket: s3Config.bucketName,
+        Key: key,
+        Body: finalBuffer,
+        ContentType: mimetype === "image/gif" ? "image/gif" : "image/webp",
+        ACL: "public-read",
+      });
+
+      await s3Client.send(command);
+
+      const imageUrl = `${s3Config.baseUrl}/${key}`;
+      logger.info(`Content image uploaded by user ${userId}: ${imageUrl}`);
+
+      return imageUrl;
+    } catch (error) {
+      logger.error("Failed to upload content image:", error);
+      throw error instanceof Error
+        ? error
+        : new Error("Falha ao fazer upload da imagem");
+    }
+  }
+
+  /**
+   * Delete content image
+   */
+  static async deleteContentImage(imageUrl: string): Promise<void> {
+    try {
+      await this.deleteFileByUrl(imageUrl);
+    } catch (error) {
+      logger.error("Failed to delete content image:", error);
+    }
+  }
+}

@@ -14,6 +14,7 @@ import moderatorRoutes from './moderator.routes';
 import contactRoutes from './contact.routes';
 import featureRequestRoutes from './feature-request.routes';
 import statsRoutes from './stats.routes';
+import uploadRoutes from './upload.routes';
 
 const router = Router();
 
@@ -33,6 +34,7 @@ router.use('/', moderatorRoutes);
 router.use('/contact', contactRoutes);
 router.use('/', featureRequestRoutes);
 router.use('/stats', statsRoutes);
+router.use('/upload', uploadRoutes);
 
 export default router;
 
