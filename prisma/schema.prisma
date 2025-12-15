@@ -185,12 +185,13 @@ model Post {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   // Relations
-  author   User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  tags     PostTag[]
-  comments Comment[]
-  voteList Vote[]
-  reports  Report[]
-  actions  ModeratorAction[]
+  author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  tags          PostTag[]
+  comments      Comment[]
+  voteList      Vote[]
+  reports       Report[]
+  actions       ModeratorAction[]
+  notifications Notification[]      @relation("NotificationPost")
 
   @@index([slug])
   @@index([authorId])
@@ -239,13 +240,14 @@ model Comment {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   // Relations
-  post     Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
-  author   User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  parent   Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
-  replies  Comment[]           @relation("CommentReplies")
-  voteList Vote[]
-  reports  Report[]
-  actions  ModeratorAction[]
+  post          Post                @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author        User                @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent        Comment?            @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies       Comment[]           @relation("CommentReplies")
+  voteList      Vote[]
+  reports       Report[]
+  actions       ModeratorAction[]
+  notifications Notification[]      @relation("NotificationComment")
 
   @@index([postId])
   @@index([authorId])
@@ -284,8 +286,10 @@ model Notification {
   senderId         String?          @map("sender_id")
   createdAt        DateTime         @default(now()) @map("created_at")
 
-  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sender User? @relation("SentNotifications", fields: [senderId], references: [id], onDelete: SetNull)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender  User?    @relation("SentNotifications", fields: [senderId], references: [id], onDelete: SetNull)
+  post    Post?    @relation("NotificationPost", fields: [relatedPostId], references: [id], onDelete: Cascade)
+  comment Comment? @relation("NotificationComment", fields: [relatedCommentId], references: [id], onDelete: Cascade)
 
   @@index([userId, read])
   @@index([createdAt])

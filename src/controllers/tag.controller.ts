@@ -37,6 +37,37 @@ export class TagController {
     }
   }
 
+  static async getPostsByTag(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { slug } = req.params;
+      const { page = 1, limit = 20 } = req.query;
+      const userId = req.user?.id;
+
+      const result = await TagService.getPostsByTag(
+        slug,
+        Number(page),
+        Number(limit),
+        userId
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: result.posts,
+        meta: {
+          tag: result.tag,
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+          hasMore: result.hasMore,
+        },
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async createTag(req: Request, res: Response, next: NextFunction) {
     try {
       const tag = await TagService.createTag(req.body);

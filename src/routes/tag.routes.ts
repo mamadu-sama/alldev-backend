@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { TagController } from '@/controllers/tag.controller';
-import { authenticate } from '@/middleware/auth.middleware';
+import { authenticate, optionalAuth } from '@/middleware/auth.middleware';
 import { requireAdmin } from '@/middleware/role.middleware';
 import { validate, validateQuery } from '@/middleware/validate.middleware';
 import { createTagSchema, updateTagSchema, getTagsQuerySchema } from '@/schemas/tag.schema';
@@ -11,6 +11,8 @@ const router = Router();
 router.get('/', validateQuery(getTagsQuerySchema), TagController.getAllTags);
 
 router.get('/:slug', TagController.getTagBySlug);
+
+router.get('/:slug/posts', optionalAuth, TagController.getPostsByTag);
 
 // Admin routes
 router.post('/', authenticate, requireAdmin, validate(createTagSchema), TagController.createTag);

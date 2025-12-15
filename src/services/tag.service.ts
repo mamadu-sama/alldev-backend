@@ -32,6 +32,83 @@ export class TagService {
     return tag;
   }
 
+  static async getPostsByTag(slug: string, page: number = 1, limit: number = 20, userId?: string) {
+    try {
+      const tag = await this.getTagBySlug(slug);
+
+      const skip = (page - 1) * limit;
+
+      const where = {
+        isHidden: false,
+        tags: {
+          some: {
+            tag: { slug },
+          },
+        },
+      };
+
+      const [posts, total] = await Promise.all([
+        prisma.post.findMany({
+          where,
+          include: {
+            author: {
+              select: {
+                id: true,
+                username: true,
+                avatarUrl: true,
+                reputation: true,
+                level: true,
+              },
+            },
+            tags: {
+              include: {
+                tag: true,
+              },
+            },
+            voteList: userId
+              ? {
+                  where: { userId },
+                  select: { type: true },
+                }
+              : false,
+          },
+          orderBy: { createdAt: 'desc' },
+          skip,
+          take: limit,
+        }),
+        prisma.post.count({ where }),
+      ]);
+
+      const formattedPosts = posts.map((post) => ({
+        id: post.id,
+        title: post.title,
+        slug: post.slug,
+        content: post.content,
+        votes: post.votes,
+        views: post.views,
+        commentCount: post.commentCount,
+        hasAcceptedAnswer: post.hasAcceptedAnswer,
+        isLocked: post.isLocked,
+        createdAt: post.createdAt,
+        updatedAt: post.updatedAt,
+        author: post.author,
+        tags: post.tags.map((pt) => pt.tag),
+        userVote: post.voteList && post.voteList.length > 0 ? post.voteList[0].type.toLowerCase() : null,
+      }));
+
+      return {
+        tag,
+        posts: formattedPosts,
+        total,
+        page,
+        limit,
+        hasMore: skip + posts.length < total,
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
   static async createTag(data: { name: string; description?: string }) {
     // Check if tag with same name exists
     const existing = await prisma.tag.findUnique({

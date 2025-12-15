@@ -1,7 +1,7 @@
-import { prisma } from '@/config/database';
-import { NotificationType, Role } from '@prisma/client';
-import { logger } from '@/utils/logger';
-import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
+import { prisma } from "@/config/database";
+import { NotificationType, Role } from "@prisma/client";
+import { logger } from "@/utils/logger";
+import { getPaginationParams, createPaginationMeta } from "@/utils/pagination";
 
 export class NotificationService {
   /**
@@ -31,8 +31,15 @@ export class NotificationService {
               avatarUrl: true,
             },
           },
+          post: {
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+            },
+          },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -42,10 +49,17 @@ export class NotificationService {
       }),
     ]);
 
+    // Format notifications to include relatedPostSlug
+    const formattedNotifications = notifications.map((notification) => ({
+      ...notification,
+      relatedPostSlug: notification.post?.slug,
+      post: notification.post,
+    }));
+
     return {
-      notifications,
+      notifications: formattedNotifications,
       meta: {
-        ...createPaginationMeta({ total, page, limit }),
+        ...createPaginationMeta({ page, total, limit }),
         unreadCount,
       },
     };
@@ -60,11 +74,11 @@ export class NotificationService {
     });
 
     if (!notification) {
-      throw new Error('Notificação não encontrada');
+      throw new Error("Notificação não encontrada");
     }
 
     if (notification.userId !== userId) {
-      throw new Error('Sem permissão para marcar esta notificação');
+      throw new Error("Sem permissão para marcar esta notificação");
     }
 
     return await prisma.notification.update({
@@ -112,10 +126,14 @@ export class NotificationService {
         },
       });
 
-      logger.info('Notification sent to user', { userId, type, notificationId: notification.id });
+      logger.info("Notification sent to user", {
+        userId,
+        type,
+        notificationId: notification.id,
+      });
       return notification;
     } catch (error) {
-      logger.error('Error sending notification', { error, userId, type });
+      logger.error("Error sending notification", { error, userId, type });
       throw error;
     }
   }
@@ -127,13 +145,13 @@ export class NotificationService {
     adminId: string,
     title: string,
     message: string,
-    targetAudience: 'all' | 'admins' | 'moderators' | 'users'
+    targetAudience: "all" | "admins" | "moderators" | "users"
   ) {
     try {
       // Get target users based on audience
       let targetUserIds: string[] = [];
 
-      if (targetAudience === 'all') {
+      if (targetAudience === "all") {
         // Get all active users
         const users = await prisma.user.findMany({
           where: { isActive: true },
@@ -155,7 +173,7 @@ export class NotificationService {
             role: { in: roles },
           },
           select: { userId: true },
-          distinct: ['userId'],
+          distinct: ["userId"],
         });
 
         targetUserIds = userRoles.map((ur) => ur.userId);
@@ -165,7 +183,7 @@ export class NotificationService {
       targetUserIds = targetUserIds.filter((id) => id !== adminId);
 
       if (targetUserIds.length === 0) {
-        logger.warn('No target users found for broadcast', { targetAudience });
+        logger.warn("No target users found for broadcast", { targetAudience });
         return { sent: 0, targetAudience };
       }
 
@@ -183,7 +201,7 @@ export class NotificationService {
         data: notifications,
       });
 
-      logger.info('Broadcast notification sent', {
+      logger.info("Broadcast notification sent", {
         adminId,
         targetAudience,
         recipientCount: targetUserIds.length,
@@ -194,7 +212,11 @@ export class NotificationService {
         targetAudience,
       };
     } catch (error) {
-      logger.error('Error sending broadcast notification', { error, adminId, targetAudience });
+      logger.error("Error sending broadcast notification", {
+        error,
+        adminId,
+        targetAudience,
+      });
       throw error;
     }
   }
@@ -221,10 +243,10 @@ export class NotificationService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
-        distinct: ['title', 'message', 'senderId'], // Group similar notifications
+        distinct: ["title", "message", "senderId"], // Group similar notifications
       }),
       prisma.notification.count({
         where: {
