@@ -40,8 +40,11 @@ if (env.NODE_ENV === "development") {
   app.use(morgan("combined"));
 }
 
-// Rate limiting
-app.use(globalRateLimiter);
+// Rate limiting (only for production or unauthenticated users)
+if (env.NODE_ENV === "production") {
+  app.use(globalRateLimiter);
+}
+// In development, skip global rate limiting to allow easier testing
 
 // Health check
 app.get("/health", (req, res) => {

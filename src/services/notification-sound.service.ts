@@ -1,6 +1,6 @@
-import { prisma } from '@/config/database';
-import { NotificationType } from '@prisma/client';
-import { logger } from '@/utils/logger';
+import { prisma } from "@/config/database";
+import { NotificationType } from "@prisma/client";
+import { logger } from "@/utils/logger";
 
 export class NotificationSoundService {
   /**
@@ -26,15 +26,12 @@ export class NotificationSoundService {
             },
           },
         },
-        orderBy: [
-          { isDefault: 'desc' },
-          { createdAt: 'desc' },
-        ],
+        orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
       });
 
       return sounds;
     } catch (error) {
-      logger.error('Error fetching notification sounds', { error });
+      logger.error("Error fetching notification sounds", { error });
       throw error;
     }
   }
@@ -58,12 +55,12 @@ export class NotificationSoundService {
       });
 
       if (!sound) {
-        throw new Error('Som de notificação não encontrado');
+        throw new Error("Som de notificação não encontrado");
       }
 
       return sound;
     } catch (error) {
-      logger.error('Error fetching sound by ID', { error, soundId });
+      logger.error("Error fetching sound by ID", { error, soundId });
       throw error;
     }
   }
@@ -112,10 +109,13 @@ export class NotificationSoundService {
         },
       });
 
-      logger.info('Notification sound created', { soundId: sound.id, name: sound.name });
+      logger.info("Notification sound created", {
+        soundId: sound.id,
+        name: sound.name,
+      });
       return sound;
     } catch (error) {
-      logger.error('Error creating notification sound', { error, data });
+      logger.error("Error creating notification sound", { error, data });
       throw error;
     }
   }
@@ -155,10 +155,14 @@ export class NotificationSoundService {
         },
       });
 
-      logger.info('Notification sound updated', { soundId, data });
+      logger.info("Notification sound updated", { soundId, data });
       return sound;
     } catch (error) {
-      logger.error('Error updating notification sound', { error, soundId, data });
+      logger.error("Error updating notification sound", {
+        error,
+        soundId,
+        data,
+      });
       throw error;
     }
   }
@@ -173,15 +177,18 @@ export class NotificationSoundService {
       });
 
       if (!sound) {
-        throw new Error('Som de notificação não encontrado');
+        throw new Error("Som de notificação não encontrado");
       }
 
       // Delete file from S3
       try {
-        const { UploadService } = await import('./upload.service');
+        const { UploadService } = await import("./upload.service");
         await UploadService.deleteNotificationSound(sound.fileUrl);
       } catch (fileError) {
-        logger.warn('Could not delete sound file from S3', { fileUrl: sound.fileUrl, fileError });
+        logger.warn("Could not delete sound file from S3", {
+          fileUrl: sound.fileUrl,
+          fileError,
+        });
       }
 
       // Delete from database
@@ -189,10 +196,13 @@ export class NotificationSoundService {
         where: { id: soundId },
       });
 
-      logger.info('Notification sound deleted', { soundId, fileName: sound.fileName });
+      logger.info("Notification sound deleted", {
+        soundId,
+        fileName: sound.fileName,
+      });
       return { success: true };
     } catch (error) {
-      logger.error('Error deleting notification sound', { error, soundId });
+      logger.error("Error deleting notification sound", { error, soundId });
       throw error;
     }
   }
@@ -202,26 +212,19 @@ export class NotificationSoundService {
    */
   static async getUserPreferences(userId: string) {
     try {
-      const preferences = await prisma.userNotificationSoundPreference.findMany({
-        where: { userId },
-        include: {
-          sound: true,
-        },
-      });
+      const preferences = await prisma.userNotificationSoundPreference.findMany(
+        {
+          where: { userId },
+          include: {
+            sound: true,
+          },
+        }
+      );
 
-      // Create map of type -> preference
-      const preferencesMap: Record<string, any> = {};
-      preferences.forEach((pref) => {
-        preferencesMap[pref.notificationType] = {
-          soundId: pref.soundId,
-          useGeneratedSound: pref.useGeneratedSound,
-          sound: pref.sound,
-        };
-      });
-
-      return preferencesMap;
+      // Return array directly for frontend
+      return preferences;
     } catch (error) {
-      logger.error('Error fetching user sound preferences', { error, userId });
+      logger.error("Error fetching user sound preferences", { error, userId });
       throw error;
     }
   }
@@ -234,7 +237,7 @@ export class NotificationSoundService {
     notificationType: NotificationType,
     data: {
       soundId?: string | null;
-      useGeneratedSound?: boolean;
+      enabled?: boolean;
     }
   ) {
     try {
@@ -245,7 +248,7 @@ export class NotificationSoundService {
         });
 
         if (!sound || !sound.isActive) {
-          throw new Error('Som de notificação inválido ou inativo');
+          throw new Error("Som de notificação inválido ou inativo");
         }
       }
 
@@ -258,23 +261,32 @@ export class NotificationSoundService {
         },
         update: {
           soundId: data.soundId === null ? null : data.soundId,
-          useGeneratedSound: data.useGeneratedSound ?? false,
+          enabled: data.enabled ?? true,
         },
         create: {
           userId,
           notificationType,
           soundId: data.soundId,
-          useGeneratedSound: data.useGeneratedSound ?? false,
+          enabled: data.enabled ?? true,
         },
         include: {
           sound: true,
         },
       });
 
-      logger.info('User sound preference updated', { userId, notificationType, data });
+      logger.info("User sound preference updated", {
+        userId,
+        notificationType,
+        data,
+      });
       return preference;
     } catch (error) {
-      logger.error('Error setting user sound preference', { error, userId, notificationType, data });
+      logger.error("Error setting user sound preference", {
+        error,
+        userId,
+        notificationType,
+        data,
+      });
       throw error;
     }
   }
@@ -287,7 +299,7 @@ export class NotificationSoundService {
     preferences: Array<{
       notificationType: NotificationType;
       soundId?: string | null;
-      useGeneratedSound?: boolean;
+      enabled?: boolean;
     }>
   ) {
     try {
@@ -295,14 +307,14 @@ export class NotificationSoundService {
         preferences.map((pref) =>
           this.setUserPreference(userId, pref.notificationType, {
             soundId: pref.soundId,
-            useGeneratedSound: pref.useGeneratedSound,
+            enabled: pref.enabled,
           })
         )
       );
 
       return results;
     } catch (error) {
-      logger.error('Error batch updating user preferences', { error, userId });
+      logger.error("Error batch updating user preferences", { error, userId });
       throw error;
     }
   }
@@ -316,10 +328,10 @@ export class NotificationSoundService {
         where: { userId },
       });
 
-      logger.info('User sound preferences reset', { userId });
+      logger.info("User sound preferences reset", { userId });
       return { success: true };
     } catch (error) {
-      logger.error('Error resetting user preferences', { error, userId });
+      logger.error("Error resetting user preferences", { error, userId });
       throw error;
     }
   }
@@ -337,14 +349,14 @@ export class NotificationSoundService {
           where: { soundId },
         }),
         prisma.userNotificationSoundPreference.groupBy({
-          by: ['notificationType'],
+          by: ["notificationType"],
           where: { soundId },
           _count: true,
         }),
       ]);
 
       if (!sound) {
-        throw new Error('Som não encontrado');
+        throw new Error("Som não encontrado");
       }
 
       return {
@@ -356,9 +368,8 @@ export class NotificationSoundService {
         }, {} as Record<string, number>),
       };
     } catch (error) {
-      logger.error('Error fetching sound statistics', { error, soundId });
+      logger.error("Error fetching sound statistics", { error, soundId });
       throw error;
     }
   }
 }
-
