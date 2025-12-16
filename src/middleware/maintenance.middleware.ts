@@ -90,7 +90,12 @@ export const checkMaintenance = async (
           );
           if (hasAdminOrMod) {
             // Populate req.user for downstream middleware
-            req.user = { id: user.id };
+            req.user = {
+              id: user.id,
+              username: user.username,
+              email: user.email,
+              roles: user.roles.map((r) => r.role),
+            };
             return next();
           }
         }
@@ -120,4 +125,3 @@ export const checkMaintenance = async (
 export const clearMaintenanceCache = () => {
   maintenanceCache = null;
 };
-
