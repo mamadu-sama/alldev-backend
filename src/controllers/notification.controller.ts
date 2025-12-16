@@ -1,12 +1,16 @@
-import { Request, Response, NextFunction } from 'express';
-import { NotificationService } from '@/services/notification.service';
-import { sendAdminNotificationSchema } from '@/schemas/notification.schema';
+import { Request, Response, NextFunction } from "express";
+import { NotificationService } from "@/services/notification.service";
+import { sendAdminNotificationSchema } from "@/schemas/notification.schema";
 
 export class NotificationController {
   /**
    * Get user notifications (authenticated user only)
    */
-  static async getUserNotifications(req: Request, res: Response, next: NextFunction) {
+  static async getUserNotifications(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const userId = req.user!.id;
       const { page = 1, limit = 20, unreadOnly = false } = req.query;
@@ -15,7 +19,7 @@ export class NotificationController {
         userId,
         Number(page),
         Number(limit),
-        unreadOnly === 'true'
+        unreadOnly === "true"
       );
 
       res.json({
@@ -36,7 +40,10 @@ export class NotificationController {
       const userId = req.user!.id;
       const { notificationId } = req.params;
 
-      const notification = await NotificationService.markAsRead(notificationId, userId);
+      const notification = await NotificationService.markAsRead(
+        notificationId,
+        userId
+      );
 
       res.json({
         success: true,
@@ -66,12 +73,45 @@ export class NotificationController {
   }
 
   /**
+   * Get all notifications (ADMIN only)
+   */
+  static async getAdminNotifications(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { page = 1, limit = 50, type, userId } = req.query;
+
+      const result = await NotificationService.getAdminNotifications({
+        page: Number(page),
+        limit: Number(limit),
+        type: type as string | undefined,
+        userId: userId as string | undefined,
+      });
+
+      res.json({
+        success: true,
+        data: result.notifications,
+        meta: result.meta,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Send broadcast notification (ADMIN only)
    */
-  static async sendBroadcastNotification(req: Request, res: Response, next: NextFunction) {
+  static async sendBroadcastNotification(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const adminId = req.user!.id;
-      const { title, message, targetAudience } = sendAdminNotificationSchema.parse(req.body);
+      const { title, message, targetAudience } =
+        sendAdminNotificationSchema.parse(req.body);
 
       const result = await NotificationService.sendBroadcastNotification(
         adminId,
@@ -93,11 +133,18 @@ export class NotificationController {
   /**
    * Get broadcast history (ADMIN only)
    */
-  static async getBroadcastHistory(req: Request, res: Response, next: NextFunction) {
+  static async getBroadcastHistory(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { page = 1, limit = 50 } = req.query;
 
-      const result = await NotificationService.getBroadcastHistory(Number(page), Number(limit));
+      const result = await NotificationService.getBroadcastHistory(
+        Number(page),
+        Number(limit)
+      );
 
       res.json({
         success: true,
@@ -109,4 +156,3 @@ export class NotificationController {
     }
   }
 }
-

@@ -100,6 +100,68 @@ export class NotificationService {
   }
 
   /**
+   * Get all notifications for admin panel
+   */
+  static async getAdminNotifications(options: {
+    page: number;
+    limit: number;
+    type?: string;
+    userId?: string;
+  }) {
+    const { page, limit, type, userId } = options;
+    const { skip, take } = getPaginationParams({ page, limit });
+
+    const where: any = {};
+
+    if (type) {
+      where.type = type as NotificationType;
+    }
+
+    if (userId) {
+      where.userId = userId;
+    }
+
+    const [notifications, total] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        include: {
+          user: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+              avatarUrl: true,
+            },
+          },
+          sender: {
+            select: {
+              id: true,
+              username: true,
+              avatarUrl: true,
+            },
+          },
+          post: {
+            select: {
+              id: true,
+              slug: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take,
+      }),
+      prisma.notification.count({ where }),
+    ]);
+
+    return {
+      notifications,
+      meta: createPaginationMeta(page, limit, total),
+    };
+  }
+
+  /**
    * Send notification to specific user (internal use)
    */
   static async sendToUser(
@@ -469,4 +531,3 @@ export class NotificationService {
     }
   }
 }
-

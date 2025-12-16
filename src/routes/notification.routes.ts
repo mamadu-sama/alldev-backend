@@ -29,11 +29,18 @@ router.post(
   NotificationController.markAllAsRead
 );
 
-// Admin broadcast routes
+// Admin notification routes
+router.get(
+  "/admin/notifications",
+  authenticate,
+  requireRole(Role.ADMIN),
+  NotificationController.getAdminNotifications
+);
+
 router.post(
   "/admin/notifications/broadcast",
   authenticate,
-  requireRole([Role.ADMIN]),
+  requireRole(Role.ADMIN),
   validate(sendAdminNotificationSchema),
   NotificationController.sendBroadcastNotification
 );
@@ -41,7 +48,7 @@ router.post(
 router.get(
   "/admin/notifications/broadcast/history",
   authenticate,
-  requireRole([Role.ADMIN]),
+  requireRole(Role.ADMIN),
   NotificationController.getBroadcastHistory
 );
 
