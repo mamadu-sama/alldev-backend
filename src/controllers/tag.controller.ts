@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { TagService } from '@/services/tag.service';
-import { ApiResponse } from '@/types';
+import { Request, Response, NextFunction } from "express";
+import { TagService } from "@/services/tag.service";
+import { ApiResponse } from "@/types";
 
 export class TagController {
   static async getAllTags(req: Request, res: Response, next: NextFunction) {
@@ -52,9 +52,11 @@ export class TagController {
 
       const response: ApiResponse = {
         success: true,
-        data: result.posts,
-        meta: {
+        data: {
           tag: result.tag,
+          posts: result.posts,
+        },
+        meta: {
           total: result.total,
           page: result.page,
           limit: result.limit,
@@ -112,4 +114,3 @@ export class TagController {
     }
   }
 }
-
