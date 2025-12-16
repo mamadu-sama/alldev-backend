@@ -36,8 +36,49 @@ export class UserService {
       reputation: user.reputation,
       level: user.level,
       isVerified: user.isVerified,
+      notificationSound: user.notificationSound,
+      emailNotifications: user.emailNotifications,
       createdAt: user.createdAt,
     };
+  }
+
+  static async updateNotificationPreferences(
+    userId: string,
+    data: {
+      notificationSound?: boolean;
+      emailNotifications?: boolean;
+    }
+  ) {
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        notificationSound: data.notificationSound,
+        emailNotifications: data.emailNotifications,
+      },
+      select: {
+        id: true,
+        notificationSound: true,
+        emailNotifications: true,
+      },
+    });
+
+    return user;
+  }
+
+  static async getNotificationPreferences(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        notificationSound: true,
+        emailNotifications: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError('Utilizador não encontrado');
+    }
+
+    return user;
   }
 
   static async updateProfile(

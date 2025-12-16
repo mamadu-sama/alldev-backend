@@ -222,4 +222,51 @@ export class UploadService {
       logger.error("Failed to delete content image:", error);
     }
   }
+
+  /**
+   * Upload notification sound to S3
+   */
+  static async uploadNotificationSound(
+    buffer: Buffer,
+    originalName: string,
+    mimeType: string
+  ): Promise<{ fileUrl: string; fileName: string }> {
+    try {
+      // Generate unique filename
+      const timestamp = Date.now();
+      const extension = originalName.split('.').pop() || 'mp3';
+      const fileName = `sound-${timestamp}.${extension}`;
+      const key = `sounds/${fileName}`;
+
+      const command = new PutObjectCommand({
+        Bucket: s3Config.bucketName,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType,
+        CacheControl: 'public, max-age=31536000',
+      });
+
+      await s3Client.send(command);
+      const fileUrl = `${s3Config.baseUrl}/${key}`;
+
+      logger.info(`Sound uploaded: ${fileName}`);
+      return { fileUrl, fileName };
+    } catch (error) {
+      logger.error("Failed to upload sound:", error);
+      throw new Error("Falha ao fazer upload do som");
+    }
+  }
+
+  /**
+   * Delete notification sound from S3
+   */
+  static async deleteNotificationSound(fileUrl: string): Promise<void> {
+    try {
+      await this.deleteFileByUrl(fileUrl);
+      logger.info(`Sound deleted from S3`);
+    } catch (error) {
+      logger.error("Failed to delete sound:", error);
+      // Don't throw - file might not exist
+    }
+  }
 }

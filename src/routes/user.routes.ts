@@ -3,7 +3,11 @@ import { UserController } from '@/controllers/user.controller';
 import { authenticate } from '@/middleware/auth.middleware';
 import { validate, validateQuery } from '@/middleware/validate.middleware';
 import { upload } from '@/config/multer';
-import { updateProfileSchema, getUserPostsQuerySchema } from '@/schemas/user.schema';
+import {
+  updateProfileSchema,
+  getUserPostsQuerySchema,
+  updateNotificationPreferencesSchema,
+} from '@/schemas/user.schema';
 
 const router = Router();
 
@@ -34,6 +38,16 @@ router.post(
 );
 
 router.delete('/me/cover', authenticate, UserController.deleteCoverImage);
+
+// Notification preferences
+router.get('/me/preferences/notifications', authenticate, UserController.getNotificationPreferences);
+
+router.patch(
+  '/me/preferences/notifications',
+  authenticate,
+  validate(updateNotificationPreferencesSchema),
+  UserController.updateNotificationPreferences
+);
 
 // Public routes
 router.get('/:username', UserController.getUserByUsername);

@@ -15,6 +15,7 @@ import contactRoutes from './contact.routes';
 import featureRequestRoutes from './feature-request.routes';
 import statsRoutes from './stats.routes';
 import uploadRoutes from './upload.routes';
+import notificationSoundRoutes from './notification-sound.routes';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.use('/contact', contactRoutes);
 router.use('/', featureRequestRoutes);
 router.use('/stats', statsRoutes);
 router.use('/upload', uploadRoutes);
+router.use('/', notificationSoundRoutes);
 
 export default router;
 

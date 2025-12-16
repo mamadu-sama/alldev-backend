@@ -135,5 +135,35 @@ export class UserController {
       next(error);
     }
   }
+
+  static async getNotificationPreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const preferences = await UserService.getNotificationPreferences(req.user!.id);
+
+      const response: ApiResponse = {
+        success: true,
+        data: preferences,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateNotificationPreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const preferences = await UserService.updateNotificationPreferences(req.user!.id, req.body);
+
+      const response: ApiResponse = {
+        success: true,
+        data: preferences,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
