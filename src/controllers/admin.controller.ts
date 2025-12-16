@@ -1,6 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { AdminService } from '@/services/admin.service';
-import { Role } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import { AdminService } from "@/services/admin.service";
+import { UserService } from "@/services/user.service";
+import { Role } from "@prisma/client";
 
 export class AdminController {
   static async getAllUsers(req: Request, res: Response, next: NextFunction) {
@@ -26,7 +27,11 @@ export class AdminController {
       const { roles } = req.body;
       const adminId = req.user!.id;
 
-      const user = await AdminService.updateUserRole(adminId, userId, roles as Role[]);
+      const user = await AdminService.updateUserRole(
+        adminId,
+        userId,
+        roles as Role[]
+      );
 
       res.json({
         success: true,
@@ -47,7 +52,7 @@ export class AdminController {
 
       res.json({
         success: true,
-        message: 'Utilizador banido com sucesso',
+        message: "Utilizador banido com sucesso",
       });
     } catch (error) {
       next(error);
@@ -63,7 +68,7 @@ export class AdminController {
 
       res.json({
         success: true,
-        message: 'Ban removido com sucesso',
+        message: "Ban removido com sucesso",
       });
     } catch (error) {
       next(error);
@@ -83,7 +88,11 @@ export class AdminController {
     }
   }
 
-  static async getMaintenanceMode(req: Request, res: Response, next: NextFunction) {
+  static async getMaintenanceMode(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const maintenance = await AdminService.getMaintenanceMode();
 
@@ -96,7 +105,11 @@ export class AdminController {
     }
   }
 
-  static async updateMaintenanceMode(req: Request, res: Response, next: NextFunction) {
+  static async updateMaintenanceMode(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { isEnabled, message, endTime } = req.body;
       const adminId = req.user!.id;
@@ -199,7 +212,7 @@ export class AdminController {
 
       res.json({
         success: true,
-        message: 'Post ocultado com sucesso',
+        message: "Post ocultado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -215,7 +228,7 @@ export class AdminController {
 
       res.json({
         success: true,
-        message: 'Post publicado com sucesso',
+        message: "Post publicado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -252,7 +265,27 @@ export class AdminController {
       next(error);
     }
   }
+
+  /**
+   * POST /api/admin/users/:userId/reactivate
+   * Reativar conta de usuário desativada
+   */
+  static async reactivateAccount(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { userId } = req.params;
+
+      const result = await UserService.reactivateAccount(userId);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
-
-
-

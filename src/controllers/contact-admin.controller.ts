@@ -1,6 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { ContactAdminService } from '@/services/contact-admin.service';
-import { AuthenticatedRequest } from '@/types';
+import { Request, Response, NextFunction } from "express";
+import { ContactAdminService } from "@/services/contact-admin.service";
 
 export class ContactAdminController {
   /**
@@ -57,7 +56,7 @@ export class ContactAdminController {
 
       res.status(200).json({
         success: true,
-        message: 'Status atualizado com sucesso.',
+        message: "Status atualizado com sucesso.",
         data: message,
       });
     } catch (error) {
@@ -76,7 +75,7 @@ export class ContactAdminController {
 
       res.status(200).json({
         success: true,
-        message: 'Mensagem excluída com sucesso.',
+        message: "Mensagem excluída com sucesso.",
       });
     } catch (error) {
       next(error);
@@ -87,7 +86,7 @@ export class ContactAdminController {
    * POST /api/admin/contact-messages/:id/reply
    * Send reply to contact message
    */
-  static async sendReply(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  static async sendReply(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const { replyMessage } = req.body;
@@ -97,7 +96,7 @@ export class ContactAdminController {
 
       res.status(200).json({
         success: true,
-        message: 'Resposta enviada com sucesso.',
+        message: "Resposta enviada com sucesso.",
       });
     } catch (error) {
       next(error);
@@ -118,4 +117,3 @@ export class ContactAdminController {
     }
   }
 }
-

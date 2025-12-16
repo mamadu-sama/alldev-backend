@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { UserService } from '@/services/user.service';
-import { ApiResponse } from '@/types';
+import { Request, Response, NextFunction } from "express";
+import { UserService } from "@/services/user.service";
+import { ApiResponse } from "@/types";
 
 export class UserController {
   static async getProfile(req: Request, res: Response, next: NextFunction) {
@@ -39,13 +39,16 @@ export class UserController {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'FILE_REQUIRED',
-            message: 'Nenhum ficheiro enviado',
+            code: "FILE_REQUIRED",
+            message: "Nenhum ficheiro enviado",
           },
         });
       }
 
-      const result = await UserService.uploadAvatar(req.user!.id, req.file.buffer);
+      const result = await UserService.uploadAvatar(
+        req.user!.id,
+        req.file.buffer
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -67,19 +70,26 @@ export class UserController {
     }
   }
 
-  static async uploadCoverImage(req: Request, res: Response, next: NextFunction) {
+  static async uploadCoverImage(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       if (!req.file) {
         return res.status(400).json({
           success: false,
           error: {
-            code: 'FILE_REQUIRED',
-            message: 'Nenhum ficheiro enviado',
+            code: "FILE_REQUIRED",
+            message: "Nenhum ficheiro enviado",
           },
         });
       }
 
-      const result = await UserService.uploadCoverImage(req.user!.id, req.file.buffer);
+      const result = await UserService.uploadCoverImage(
+        req.user!.id,
+        req.file.buffer
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -92,7 +102,11 @@ export class UserController {
     }
   }
 
-  static async deleteCoverImage(req: Request, res: Response, next: NextFunction) {
+  static async deleteCoverImage(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       await UserService.deleteCoverImage(req.user!.id);
       res.status(204).send();
@@ -101,7 +115,11 @@ export class UserController {
     }
   }
 
-  static async getUserByUsername(req: Request, res: Response, next: NextFunction) {
+  static async getUserByUsername(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const { username } = req.params;
       const user = await UserService.getUserByUsername(username);
@@ -136,9 +154,15 @@ export class UserController {
     }
   }
 
-  static async getNotificationPreferences(req: Request, res: Response, next: NextFunction) {
+  static async getNotificationPreferences(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const preferences = await UserService.getNotificationPreferences(req.user!.id);
+      const preferences = await UserService.getNotificationPreferences(
+        req.user!.id
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -151,13 +175,64 @@ export class UserController {
     }
   }
 
-  static async updateNotificationPreferences(req: Request, res: Response, next: NextFunction) {
+  static async updateNotificationPreferences(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
-      const preferences = await UserService.updateNotificationPreferences(req.user!.id, req.body);
+      const preferences = await UserService.updateNotificationPreferences(
+        req.user!.id,
+        req.body
+      );
 
       const response: ApiResponse = {
         success: true,
         data: preferences,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * POST /api/users/me/change-password
+   * Alterar senha do usuário
+   */
+  static async changePassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const result = await UserService.changePassword(
+        req.user!.id,
+        currentPassword,
+        newPassword
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * DELETE /api/users/me
+   * Deletar conta do usuário (soft delete)
+   */
+  static async deleteAccount(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { password } = req.body;
+      const result = await UserService.deleteAccount(req.user!.id, password);
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
       };
 
       res.json(response);
@@ -166,4 +241,3 @@ export class UserController {
     }
   }
 }
-

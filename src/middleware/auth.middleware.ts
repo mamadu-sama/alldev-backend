@@ -1,7 +1,7 @@
-import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken } from '@/utils/jwt';
-import { prisma } from '@/config/database';
-import { AuthenticationError } from '@/types';
+import { Request, Response, NextFunction } from "express";
+import { verifyAccessToken } from "@/utils/jwt";
+import { prisma } from "@/config/database";
+import { AuthenticationError } from "@/types";
 
 export const authenticate = async (
   req: Request,
@@ -11,11 +11,11 @@ export const authenticate = async (
   try {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader?.startsWith('Bearer ')) {
-      throw new AuthenticationError('Token não fornecido');
+    if (!authHeader?.startsWith("Bearer ")) {
+      throw new AuthenticationError("Token não fornecido");
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     const payload = verifyAccessToken(token);
 
     // Fetch user with roles
@@ -25,12 +25,13 @@ export const authenticate = async (
     });
 
     if (!user || !user.isActive) {
-      throw new AuthenticationError('Utilizador inválido ou inativo');
+      throw new AuthenticationError("Utilizador inválido ou inativo");
     }
 
     req.user = {
       id: user.id,
       username: user.username,
+      email: user.email,
       roles: user.roles.map((r) => r.role),
     };
 
@@ -48,8 +49,8 @@ export const optionalAuth = async (
   try {
     const authHeader = req.headers.authorization;
 
-    if (authHeader?.startsWith('Bearer ')) {
-      const token = authHeader.split(' ')[1];
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.split(" ")[1];
       const payload = verifyAccessToken(token);
 
       const user = await prisma.user.findUnique({
@@ -61,6 +62,7 @@ export const optionalAuth = async (
         req.user = {
           id: user.id,
           username: user.username,
+          email: user.email,
           roles: user.roles.map((r) => r.role),
         };
       }
@@ -72,4 +74,3 @@ export const optionalAuth = async (
     next();
   }
 };
-

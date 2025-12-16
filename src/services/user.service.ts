@@ -1,7 +1,14 @@
-import { prisma } from '@/config/database';
-import { UploadService } from './upload.service';
-import { NotFoundError, ConflictError, AuthorizationError } from '@/types';
-import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
+import { prisma } from "@/config/database";
+import { UploadService } from "./upload.service";
+import {
+  NotFoundError,
+  ConflictError,
+  AuthorizationError,
+  ValidationError,
+} from "@/types";
+import { getPaginationParams, createPaginationMeta } from "@/utils/pagination";
+import { hashPassword, comparePassword } from "@/utils/password";
+import { logger } from "@/utils/logger";
 
 export class UserService {
   static async getProfile(userId: string) {
@@ -14,7 +21,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     return {
@@ -75,7 +82,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     return user;
@@ -102,7 +109,7 @@ export class UserService {
       });
 
       if (existingUser && existingUser.id !== userId) {
-        throw new ConflictError('Username já está em uso');
+        throw new ConflictError("Username já está em uso");
       }
     }
 
@@ -223,7 +230,7 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     // Count accepted answers
@@ -253,13 +260,17 @@ export class UserService {
     };
   }
 
-  static async getUserPosts(username: string, page: number = 1, limit: number = 20) {
+  static async getUserPosts(
+    username: string,
+    page: number = 1,
+    limit: number = 20
+  ) {
     const user = await prisma.user.findUnique({
       where: { username },
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     const { skip, take } = getPaginationParams({ page, limit });
@@ -292,7 +303,7 @@ export class UserService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -308,7 +319,7 @@ export class UserService {
       id: post.id,
       title: post.title,
       slug: post.slug,
-      content: post.content.substring(0, 200) + '...',
+      content: post.content.substring(0, 200) + "...",
       author: post.author,
       tags: post.tags.map((pt) => pt.tag),
       votes: post.votes,
@@ -324,5 +335,173 @@ export class UserService {
       meta: createPaginationMeta(page, limit, total),
     };
   }
-}
 
+  /**
+   * Alterar senha do usuário
+   */
+  static async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ) {
+    // Buscar usuário com senha
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        passwordHash: true,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("Usuário não encontrado");
+    }
+
+    if (!user.isActive) {
+      throw new AuthorizationError("Conta desativada");
+    }
+
+    // Verificar senha atual
+    const isPasswordValid = await comparePassword(
+      currentPassword,
+      user.passwordHash
+    );
+    if (!isPasswordValid) {
+      throw new ValidationError("Senha atual incorreta");
+    }
+
+    // Verificar se nova senha é diferente da atual
+    const isSamePassword = await comparePassword(
+      newPassword,
+      user.passwordHash
+    );
+    if (isSamePassword) {
+      throw new ValidationError(
+        "A nova senha deve ser diferente da senha atual"
+      );
+    }
+
+    // Hash da nova senha
+    const newPasswordHash = await hashPassword(newPassword);
+
+    // Atualizar senha
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newPasswordHash,
+        updatedAt: new Date(),
+      },
+    });
+
+    logger.info("Senha alterada com sucesso", {
+      userId: user.id,
+      username: user.username,
+    });
+
+    return {
+      message: "Senha alterada com sucesso",
+    };
+  }
+
+  /**
+   * Deletar conta do usuário (soft delete)
+   */
+  static async deleteAccount(userId: string, password: string) {
+    // Buscar usuário
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        passwordHash: true,
+        isActive: true,
+        roles: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("Usuário não encontrado");
+    }
+
+    if (!user.isActive) {
+      throw new ValidationError("Conta já está desativada");
+    }
+
+    // Verificar senha
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new ValidationError("Senha incorreta");
+    }
+
+    // Verificar se é admin (não pode deletar)
+    const isAdmin = user.roles.some((role) => role.role === "ADMIN");
+    if (isAdmin) {
+      throw new AuthorizationError(
+        "Contas de administrador não podem ser deletadas. Entre em contato com o suporte."
+      );
+    }
+
+    // Soft delete - desativar conta
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+        updatedAt: new Date(),
+      },
+    });
+
+    logger.warn("Conta deletada (soft delete)", {
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    });
+
+    return {
+      message: "Conta desativada com sucesso",
+    };
+  }
+
+  /**
+   * Reativar conta (apenas para admins)
+   */
+  static async reactivateAccount(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        isActive: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundError("Usuário não encontrado");
+    }
+
+    if (user.isActive) {
+      throw new ValidationError("Conta já está ativa");
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: true,
+        updatedAt: new Date(),
+      },
+    });
+
+    logger.info("Conta reativada", {
+      userId: user.id,
+      username: user.username,
+    });
+
+    return {
+      message: "Conta reativada com sucesso",
+    };
+  }
+}
