@@ -42,7 +42,7 @@ if (env.NODE_ENV === "development") {
 
 // Rate limiting (only for production or unauthenticated users)
 if (env.NODE_ENV === "production") {
-  app.use(globalRateLimiter);
+app.use(globalRateLimiter);
 }
 // In development, skip global rate limiting to allow easier testing
 

@@ -23,6 +23,8 @@ model User {
   createdAt              DateTime                          @default(now()) @map("created_at")
   updatedAt              DateTime                          @updatedAt @map("updated_at")
   coverImageUrl          String?                           @map("cover_image_url")
+  hasCompletedOnboarding Boolean                           @default(false) @map("has_completed_onboarding")
+  onboardingCompletedAt  DateTime?                         @map("onboarding_completed_at")
   comments               Comment[]
   featureRequestComments FeatureRequestComment[]           @relation("FeatureRequestComments")
   featureRequestVotes    FeatureRequestVote[]              @relation("FeatureRequestVotes")

@@ -214,10 +214,10 @@ export class NotificationSoundService {
     try {
       const preferences = await prisma.userNotificationSoundPreference.findMany(
         {
-          where: { userId },
-          include: {
-            sound: true,
-          },
+        where: { userId },
+        include: {
+          sound: true,
+        },
         }
       );
 
