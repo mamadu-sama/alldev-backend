@@ -439,8 +439,7 @@ export class EmailService {
               <!-- Footer -->
               <div class="footer">
                 <p style="margin-bottom: 15px;">
-                  <a href="${env.FRONTEND_URL}">🌐 Website</a> • 
-                  <a href="${env.FRONTEND_URL}/about">ℹ️ Sobre</a> • 
+                  <a href="${env.FRONTEND_URL}">🌐 Website</a> •  
                   <a href="${env.FRONTEND_URL}/faq">❓ FAQ</a> • 
                   <a href="${env.FRONTEND_URL}/terms">📄 Termos</a> • 
                   <a href="${env.FRONTEND_URL}/privacy">🔒 Privacidade</a>
