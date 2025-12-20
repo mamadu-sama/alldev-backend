@@ -166,7 +166,7 @@ export class ReportService {
 
     return {
       data: reports,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 

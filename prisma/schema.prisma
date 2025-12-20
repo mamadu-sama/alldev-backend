@@ -11,7 +11,7 @@ model User {
   id                     String                            @id @default(uuid())
   username               String                            @unique
   email                  String                            @unique
-  passwordHash           String                            @map("password_hash")
+  passwordHash           String?                           @map("password_hash")
   avatarUrl              String?                           @map("avatar_url")
   bio                    String?
   skills                 String[]                          @default([])
@@ -25,6 +25,8 @@ model User {
   coverImageUrl          String?                           @map("cover_image_url")
   hasCompletedOnboarding Boolean                           @default(false) @map("has_completed_onboarding")
   onboardingCompletedAt  DateTime?                         @map("onboarding_completed_at")
+  googleId               String?                           @unique @map("google_id")
+  provider               String?                           @default("local")
   comments               Comment[]
   featureRequestComments FeatureRequestComment[]           @relation("FeatureRequestComments")
   featureRequestVotes    FeatureRequestVote[]              @relation("FeatureRequestVotes")
@@ -43,10 +45,18 @@ model User {
   votes                  Vote[]
   uploadedSounds         NotificationSound[]               @relation("UploadedSounds")
   soundPreferences       UserNotificationSoundPreference[] @relation("UserSoundPreferences")
+  followedTags           UserTagFollow[]
+  privacyPolicyUpdates   PrivacyPolicyContent[]            @relation("PrivacyPolicyUpdates")
+  privacyPolicyHistory   PrivacyPolicyHistory[]            @relation("PrivacyPolicyHistoryUpdates")
+  termsOfUseUpdates      TermsOfUseContent[]               @relation("TermsOfUseUpdates")
+  termsOfUseHistory      TermsOfUseHistory[]               @relation("TermsOfUseHistoryUpdates")
+  cookiePolicyUpdates    CookiePolicyContent[]             @relation("CookiePolicyUpdates")
+  cookiePolicyHistory    CookiePolicyHistory[]             @relation("CookiePolicyHistoryUpdates")
 
   @@index([username])
   @@index([email])
   @@index([reputation])
+  @@index([googleId])
   @@map("users")
 }
 
@@ -114,14 +124,15 @@ model Post {
 }
 
 model Tag {
-  id          String    @id @default(uuid())
-  name        String    @unique
-  slug        String    @unique
+  id          String          @id @default(uuid())
+  name        String          @unique
+  slug        String          @unique
   description String?
-  postCount   Int       @default(0) @map("post_count")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  postCount   Int             @default(0) @map("post_count")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
   posts       PostTag[]
+  followers   UserTagFollow[]
 
   @@index([slug])
   @@index([postCount])
@@ -415,6 +426,279 @@ model UserNotificationSoundPreference {
   @@map("user_notification_sound_preferences")
 }
 
+model UserTagFollow {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  tagId                 String   @map("tag_id")
+  notifyOnNewPost       Boolean  @default(true) @map("notify_on_new_post")
+  createdAt             DateTime @default(now()) @map("created_at")
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag                   Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tagId])
+  @@index([userId])
+  @@index([tagId])
+  @@map("user_tag_follows")
+}
+
+// Privacy Policy Content Sections
+model PrivacyPolicyContent {
+  id                        String   @id @default(uuid())
+  lastUpdated               DateTime @default(now()) @map("last_updated")
+  
+  // Section 1: Dados que Coletamos
+  dataCollectionUserProvided String @map("data_collection_user_provided")
+  dataCollectionAutomatic    String @map("data_collection_automatic")
+  dataCollectionThirdParty   String @map("data_collection_third_party")
+  
+  // Section 2: Como Usamos Seus Dados
+  dataUsageDescription       String @map("data_usage_description")
+  
+  // Section 3: Compartilhamento de Dados
+  dataSharingDescription     String @map("data_sharing_description")
+  dataSharingImportantNote   String @map("data_sharing_important_note")
+  
+  // Section 4: Segurança dos Dados
+  securityMeasures           String @map("security_measures")
+  securityDisclaimer         String @map("security_disclaimer")
+  
+  // Section 5: Retenção de Dados
+  dataRetentionDescription   String @map("data_retention_description")
+  
+  // Section 6: Seus Direitos LGPD
+  lgpdRightsDescription      String @map("lgpd_rights_description")
+  lgpdContactInfo            String @map("lgpd_contact_info")
+  
+  // Section 7: Menores de Idade
+  minorsPolicy               String @map("minors_policy")
+  
+  // Section 8: Transferências Internacionais
+  internationalTransfers     String @map("international_transfers")
+  
+  // Section 9: Exclusão de Conta
+  accountDeletionDescription String @map("account_deletion_description")
+  accountDeletionProcess     String @map("account_deletion_process")
+  
+  // Section 10: Contato e DPO
+  dpoName                    String @map("dpo_name")
+  dpoEmail                   String @map("dpo_email")
+  dpoContactPage             String @map("dpo_contact_page")
+  
+  updatedBy                  String? @map("updated_by")
+  updatedByUser              User?   @relation("PrivacyPolicyUpdates", fields: [updatedBy], references: [id], onDelete: SetNull)
+  
+  @@map("privacy_policy_content")
+}
+
+// Privacy Policy Update History
+model PrivacyPolicyHistory {
+  id                         String   @id @default(uuid())
+  contentId                  String   @map("content_id")
+  
+  // Changed fields snapshot
+  dataCollectionUserProvided String @map("data_collection_user_provided")
+  dataCollectionAutomatic    String @map("data_collection_automatic")
+  dataCollectionThirdParty   String @map("data_collection_third_party")
+  dataUsageDescription       String @map("data_usage_description")
+  dataSharingDescription     String @map("data_sharing_description")
+  dataSharingImportantNote   String @map("data_sharing_important_note")
+  securityMeasures           String @map("security_measures")
+  securityDisclaimer         String @map("security_disclaimer")
+  dataRetentionDescription   String @map("data_retention_description")
+  lgpdRightsDescription      String @map("lgpd_rights_description")
+  lgpdContactInfo            String @map("lgpd_contact_info")
+  minorsPolicy               String @map("minors_policy")
+  internationalTransfers     String @map("international_transfers")
+  accountDeletionDescription String @map("account_deletion_description")
+  accountDeletionProcess     String @map("account_deletion_process")
+  dpoName                    String @map("dpo_name")
+  dpoEmail                   String @map("dpo_email")
+  dpoContactPage             String @map("dpo_contact_page")
+  
+  updatedBy                  String   @map("updated_by")
+  updatedByUser              User     @relation("PrivacyPolicyHistoryUpdates", fields: [updatedBy], references: [id], onDelete: Cascade)
+  updatedAt                  DateTime @default(now()) @map("updated_at")
+  changeDescription          String?  @map("change_description")
+  
+  @@map("privacy_policy_history")
+  @@index([contentId])
+  @@index([updatedAt])
+}
+
+// Terms of Use Content Sections
+model TermsOfUseContent {
+  id                         String   @id @default(uuid())
+  lastUpdated                DateTime @default(now()) @map("last_updated")
+  
+  // Introduction
+  introduction               String
+  
+  // Section 1: Aceitação dos Termos
+  acceptanceSection          String @map("acceptance_section")
+  
+  // Section 2: Cadastro e Conta
+  accountSection             String @map("account_section")
+  
+  // Section 3: Conteúdo do Usuário
+  userContentLicense         String @map("user_content_license")
+  userContentCreativeCommons String @map("user_content_creative_commons")
+  userContentCodeLicense     String @map("user_content_code_license")
+  userContentResponsibility  String @map("user_content_responsibility")
+  
+  // Section 4: Conduta Proibida
+  prohibitedConduct          String @map("prohibited_conduct")
+  
+  // Section 5: Moderação e Penalidades
+  moderationDescription      String @map("moderation_description")
+  penaltiesDescription       String @map("penalties_description")
+  appealProcess              String @map("appeal_process")
+  
+  // Section 6: Isenção de Garantias
+  disclaimerSection          String @map("disclaimer_section")
+  
+  // Section 7: Limitação de Responsabilidade
+  liabilityLimit             String @map("liability_limit")
+  
+  // Section 8: Alterações e Encerramento
+  changesAndTermination      String @map("changes_and_termination")
+  
+  // Section 9: Disposições Gerais
+  governingLaw               String @map("governing_law")
+  jurisdiction               String @map("jurisdiction")
+  entireAgreement            String @map("entire_agreement")
+  severability               String @map("severability")
+  
+  // Section 10: Contato
+  contactEmail               String @map("contact_email")
+  contactPage                String @map("contact_page")
+  
+  updatedBy                  String? @map("updated_by")
+  updatedByUser              User?   @relation("TermsOfUseUpdates", fields: [updatedBy], references: [id], onDelete: SetNull)
+  
+  @@map("terms_of_use_content")
+}
+
+// Terms of Use Update History
+model TermsOfUseHistory {
+  id                         String   @id @default(uuid())
+  contentId                  String   @map("content_id")
+  
+  // Changed fields snapshot
+  introduction               String
+  acceptanceSection          String @map("acceptance_section")
+  accountSection             String @map("account_section")
+  userContentLicense         String @map("user_content_license")
+  userContentCreativeCommons String @map("user_content_creative_commons")
+  userContentCodeLicense     String @map("user_content_code_license")
+  userContentResponsibility  String @map("user_content_responsibility")
+  prohibitedConduct          String @map("prohibited_conduct")
+  moderationDescription      String @map("moderation_description")
+  penaltiesDescription       String @map("penalties_description")
+  appealProcess              String @map("appeal_process")
+  disclaimerSection          String @map("disclaimer_section")
+  liabilityLimit             String @map("liability_limit")
+  changesAndTermination      String @map("changes_and_termination")
+  governingLaw               String @map("governing_law")
+  jurisdiction               String @map("jurisdiction")
+  entireAgreement            String @map("entire_agreement")
+  severability               String @map("severability")
+  contactEmail               String @map("contact_email")
+  contactPage                String @map("contact_page")
+  
+  updatedBy                  String   @map("updated_by")
+  updatedByUser              User     @relation("TermsOfUseHistoryUpdates", fields: [updatedBy], references: [id], onDelete: Cascade)
+  updatedAt                  DateTime @default(now()) @map("updated_at")
+  changeDescription          String?  @map("change_description")
+  
+  @@map("terms_of_use_history")
+  @@index([contentId])
+  @@index([updatedAt])
+}
+
+// Cookie Policy Content Sections
+model CookiePolicyContent {
+  id                         String   @id @default(uuid())
+  lastUpdated                DateTime @default(now()) @map("last_updated")
+  
+  // Introduction
+  introduction               String
+  
+  // Section 1: O Que São Cookies
+  whatAreCookiesDescription  String @map("what_are_cookies_description")
+  similarTechnologies        String @map("similar_technologies")
+  
+  // Section 2: Por Que Usamos Cookies
+  whyWeUseCookies            String @map("why_we_use_cookies")
+  
+  // Section 3: Tipos de Cookies - Essential
+  essentialCookiesDescription String @map("essential_cookies_description")
+  
+  // Section 3: Tipos de Cookies - Functional
+  functionalCookiesDescription String @map("functional_cookies_description")
+  
+  // Section 3: Tipos de Cookies - Analytics
+  analyticsCookiesDescription String @map("analytics_cookies_description")
+  
+  // Section 3: Tipos de Cookies - Marketing
+  marketingCookiesDescription String @map("marketing_cookies_description")
+  marketingNote              String @map("marketing_note")
+  
+  // Section 4: Duração dos Cookies
+  cookieDurationDescription  String @map("cookie_duration_description")
+  
+  // Section 5: Como Gerenciar Cookies
+  manageCookiesAlldev        String @map("manage_cookies_alldev")
+  manageCookiesBrowser       String @map("manage_cookies_browser")
+  manageCookiesThirdParty    String @map("manage_cookies_third_party")
+  manageCookiesWarning       String @map("manage_cookies_warning")
+  
+  // Section 6: Atualizações
+  updatesDescription         String @map("updates_description")
+  
+  // Section 7: Contato
+  contactEmail               String @map("contact_email")
+  contactPage                String @map("contact_page")
+  
+  updatedBy                  String? @map("updated_by")
+  updatedByUser              User?   @relation("CookiePolicyUpdates", fields: [updatedBy], references: [id], onDelete: SetNull)
+  
+  @@map("cookie_policy_content")
+}
+
+// Cookie Policy Update History
+model CookiePolicyHistory {
+  id                         String   @id @default(uuid())
+  contentId                  String   @map("content_id")
+  
+  // Changed fields snapshot
+  introduction               String
+  whatAreCookiesDescription  String @map("what_are_cookies_description")
+  similarTechnologies        String @map("similar_technologies")
+  whyWeUseCookies            String @map("why_we_use_cookies")
+  essentialCookiesDescription String @map("essential_cookies_description")
+  functionalCookiesDescription String @map("functional_cookies_description")
+  analyticsCookiesDescription String @map("analytics_cookies_description")
+  marketingCookiesDescription String @map("marketing_cookies_description")
+  marketingNote              String @map("marketing_note")
+  cookieDurationDescription  String @map("cookie_duration_description")
+  manageCookiesAlldev        String @map("manage_cookies_alldev")
+  manageCookiesBrowser       String @map("manage_cookies_browser")
+  manageCookiesThirdParty    String @map("manage_cookies_third_party")
+  manageCookiesWarning       String @map("manage_cookies_warning")
+  updatesDescription         String @map("updates_description")
+  contactEmail               String @map("contact_email")
+  contactPage                String @map("contact_page")
+  
+  updatedBy                  String   @map("updated_by")
+  updatedByUser              User     @relation("CookiePolicyHistoryUpdates", fields: [updatedBy], references: [id], onDelete: Cascade)
+  updatedAt                  DateTime @default(now()) @map("updated_at")
+  changeDescription          String?  @map("change_description")
+  
+  @@map("cookie_policy_history")
+  @@index([contentId])
+  @@index([updatedAt])
+}
+
 enum Role {
   USER
   MODERATOR
@@ -440,6 +724,7 @@ enum NotificationType {
   ACCEPTED
   MENTION
   SYSTEM
+  NEW_POST_IN_FOLLOWED_TAG
 }
 
 enum ReportStatus {

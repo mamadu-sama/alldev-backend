@@ -25,7 +25,7 @@ export const checkMaintenance = async (
       "/health",
       "/api/admin", // Admin routes
       "/api/moderator", // Moderator routes
-      "/api/auth", // Auth routes (login, register, etc.)
+      //"/api/auth", // Auth routes (login, register, etc.)
     ];
 
     // Check if current path starts with any allowed path
@@ -40,7 +40,9 @@ export const checkMaintenance = async (
     // Get maintenance status (with cache)
     const now = Date.now();
     if (!maintenanceCache || now - maintenanceCache.lastCheck > CACHE_TTL) {
-      const maintenance = await prisma.maintenanceMode.findFirst();
+      const maintenance = await prisma.maintenanceMode.findFirst({
+        orderBy: { updatedAt: "desc" },
+      });
       maintenanceCache = maintenance
         ? {
             isEnabled: maintenance.isEnabled,

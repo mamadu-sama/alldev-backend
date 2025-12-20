@@ -75,7 +75,7 @@ export class NotificationSoundController {
         fileName,
         fileUrl,
         fileSize: req.file.size,
-        uploadedById: req.user!.id,
+        uploadedById: (req.user as any)?.id,
         isDefault: isDefault === "true",
       });
 
@@ -146,7 +146,7 @@ export class NotificationSoundController {
     next: NextFunction
   ) {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       const preferences = await NotificationSoundService.getUserPreferences(
         userId
       );
@@ -169,7 +169,7 @@ export class NotificationSoundController {
     next: NextFunction
   ) {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       const { notificationType } = req.params;
       const { soundId, enabled } = req.body;
 
@@ -213,7 +213,7 @@ export class NotificationSoundController {
     next: NextFunction
   ) {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       const { preferences } = req.body;
 
       if (!Array.isArray(preferences)) {
@@ -247,7 +247,7 @@ export class NotificationSoundController {
     next: NextFunction
   ) {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       await NotificationSoundService.resetUserPreferences(userId);
 
       res.json({

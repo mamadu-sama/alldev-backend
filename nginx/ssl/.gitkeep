@@ -1,0 +1,2 @@
+# Diretório para parâmetros DH do SSL
+# O arquivo dhparam.pem será gerado automaticamente durante o deploy

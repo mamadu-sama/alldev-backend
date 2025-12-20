@@ -7,6 +7,7 @@ yarn-error.log*
 # Environment variables
 .env
 .env.local
+.env.production
 .env.*.local
 
 # Build output
@@ -17,10 +18,6 @@ build/
 logs/
 *.log
 
-# OS files
-.DS_Store
-Thumbs.db
-
 # IDE
 .vscode/
 .idea/
@@ -28,13 +25,35 @@ Thumbs.db
 *.swo
 *~
 
-# Test coverage
-coverage/
-.nyc_output/
+# OS
+.DS_Store
+Thumbs.db
 
 # Uploads
 uploads/*
 !uploads/.gitkeep
 
 # Prisma
-prisma/migrations/*_init/
+prisma/*.db
+prisma/*.db-journal
+
+# Testing
+coverage/
+.nyc_output/
+
+# Docker
+docker-compose.override.yml
+
+# Backups
+backups/
+*.sql
+*.dump
+
+# SSL
+nginx/ssl/*
+!nginx/ssl/.gitkeep
+certbot/
+
+# Temporary files
+*.tmp
+temp/

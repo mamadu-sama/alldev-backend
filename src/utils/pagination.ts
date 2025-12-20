@@ -32,10 +32,11 @@ export const getPaginationParams = (
 };
 
 export const createPaginationMeta = (
-  page: number,
-  limit: number,
-  total: number
+  params:
+    | { page: number; limit: number; total: number }
+    | { page: number; limit: number; total: number }
 ): PaginationMeta => {
+  const { page, limit, total } = params;
   return {
     page,
     limit,
@@ -43,4 +44,3 @@ export const createPaginationMeta = (
     hasMore: page * limit < total,
   };
 };
-

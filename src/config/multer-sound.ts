@@ -1,15 +1,15 @@
-import multer from 'multer';
+import multer from "multer";
 
 // Allowed audio mime types
 const ALLOWED_AUDIO_TYPES = [
-  'audio/mpeg',      // MP3
-  'audio/mp3',       // MP3 (alternative)
-  'audio/wav',       // WAV
-  'audio/wave',      // WAV (alternative)
-  'audio/ogg',       // OGG
-  'audio/webm',      // WebM
-  'audio/aac',       // AAC
-  'audio/x-m4a',     // M4A
+  "audio/mpeg", // MP3
+  "audio/mp3", // MP3 (alternative)
+  "audio/wav", // WAV
+  "audio/wave", // WAV (alternative)
+  "audio/ogg", // OGG
+  "audio/webm", // WebM
+  "audio/aac", // AAC
+  "audio/x-m4a", // M4A
 ];
 
 // Max file size: 2MB
@@ -19,7 +19,7 @@ const MAX_AUDIO_SIZE = 2 * 1024 * 1024;
 const storage = multer.memoryStorage();
 
 // File filter for audio files
-const audioFilter: multer.Options['fileFilter'] = (req, file, cb) => {
+const audioFilter: multer.Options["fileFilter"] = (_req, file, cb) => {
   if (ALLOWED_AUDIO_TYPES.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -39,4 +39,3 @@ export const uploadSound = multer({
     fileSize: MAX_AUDIO_SIZE,
   },
 });
-

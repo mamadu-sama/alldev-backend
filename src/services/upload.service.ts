@@ -137,7 +137,7 @@ export class UploadService {
   static async uploadContentImage(
     buffer: Buffer,
     userId: string,
-    filename: string,
+    _filename: string,
     mimetype: string
   ): Promise<string> {
     try {
@@ -234,7 +234,7 @@ export class UploadService {
     try {
       // Generate unique filename
       const timestamp = Date.now();
-      const extension = originalName.split('.').pop() || 'mp3';
+      const extension = originalName.split(".").pop() || "mp3";
       const fileName = `sound-${timestamp}.${extension}`;
       const key = `sounds/${fileName}`;
 
@@ -243,7 +243,7 @@ export class UploadService {
         Key: key,
         Body: buffer,
         ContentType: mimeType,
-        CacheControl: 'public, max-age=31536000',
+        CacheControl: "public, max-age=31536000",
       });
 
       await s3Client.send(command);

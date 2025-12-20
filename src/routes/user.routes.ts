@@ -63,6 +63,13 @@ router.post(
   UserController.changePassword
 );
 
+// Request account deletion code (sent via email)
+router.post(
+  "/me/request-deletion",
+  authenticate,
+  UserController.requestAccountDeletion
+);
+
 // Delete account (soft delete)
 router.delete(
   "/me",

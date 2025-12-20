@@ -93,7 +93,7 @@ export class CommentService {
 
     return {
       data: formattedComments,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 

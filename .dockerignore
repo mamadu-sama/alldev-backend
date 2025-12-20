@@ -1,0 +1,58 @@
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Tests
+coverage/
+.nyc_output/
+**/*.test.ts
+**/*.spec.ts
+
+# Build artifacts
+dist/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Uploads (build fresh)
+uploads/*
+!uploads/.gitkeep
+
+# Scripts
+scripts/
+
+# Backup and temp files
+backups/
+*.tmp
+temp/
+
+# Nginx and SSL (não necessário na imagem)
+nginx/
+certbot/

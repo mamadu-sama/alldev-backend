@@ -1,18 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
-import { ModerationService } from '@/services/moderation.service';
+import { Request, Response, NextFunction } from "express";
+import { ModerationService } from "@/services/moderation.service";
 
 export class ModerationController {
   static async hidePost(req: Request, res: Response, next: NextFunction) {
     try {
       const { postId } = req.params;
       const { reason } = req.body;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.hidePost(postId, moderatorId, reason);
 
       res.json({
         success: true,
-        message: 'Post ocultado com sucesso',
+        message: "Post ocultado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -22,13 +22,13 @@ export class ModerationController {
   static async unhidePost(req: Request, res: Response, next: NextFunction) {
     try {
       const { postId } = req.params;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.unhidePost(postId, moderatorId);
 
       res.json({
         success: true,
-        message: 'Post restaurado com sucesso',
+        message: "Post restaurado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -39,13 +39,13 @@ export class ModerationController {
     try {
       const { postId } = req.params;
       const { reason } = req.body;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.lockPost(postId, moderatorId, reason);
 
       res.json({
         success: true,
-        message: 'Post bloqueado com sucesso',
+        message: "Post bloqueado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -55,13 +55,13 @@ export class ModerationController {
   static async unlockPost(req: Request, res: Response, next: NextFunction) {
     try {
       const { postId } = req.params;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.unlockPost(postId, moderatorId);
 
       res.json({
         success: true,
-        message: 'Post desbloqueado com sucesso',
+        message: "Post desbloqueado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -72,13 +72,13 @@ export class ModerationController {
     try {
       const { commentId } = req.params;
       const { reason } = req.body;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.hideComment(commentId, moderatorId, reason);
 
       res.json({
         success: true,
-        message: 'Comentário ocultado com sucesso',
+        message: "Comentário ocultado com sucesso",
       });
     } catch (error) {
       next(error);
@@ -88,20 +88,24 @@ export class ModerationController {
   static async unhideComment(req: Request, res: Response, next: NextFunction) {
     try {
       const { commentId } = req.params;
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
 
       await ModerationService.unhideComment(commentId, moderatorId);
 
       res.json({
         success: true,
-        message: 'Comentário restaurado com sucesso',
+        message: "Comentário restaurado com sucesso",
       });
     } catch (error) {
       next(error);
     }
   }
 
-  static async getModerationActions(req: Request, res: Response, next: NextFunction) {
+  static async getModerationActions(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
@@ -118,6 +122,3 @@ export class ModerationController {
     }
   }
 }
-
-
-

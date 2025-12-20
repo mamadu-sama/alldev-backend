@@ -1,16 +1,20 @@
-import { prisma } from '@/config/database';
-import { generateUniqueSlug } from '@/utils/slug';
-import { NotFoundError, ValidationError } from '@/types';
+import { prisma } from "@/config/database";
+import { generateUniqueSlug } from "@/utils/slug";
+import { NotFoundError, ValidationError } from "@/types";
 
 export class TagService {
-  static async getAllTags(sort: 'popular' | 'alphabetical' = 'popular', search?: string) {
+  static async getAllTags(
+    sort: "popular" | "alphabetical" = "popular",
+    search?: string
+  ) {
     const where: any = search
       ? {
-          OR: [{ name: { contains: search, mode: 'insensitive' } }],
+          OR: [{ name: { contains: search, mode: "insensitive" } }],
         }
       : {};
 
-    const orderBy: any = sort === 'popular' ? { postCount: 'desc' } : { name: 'asc' };
+    const orderBy: any =
+      sort === "popular" ? { postCount: "desc" } : { name: "asc" };
 
     const tags = await prisma.tag.findMany({
       where,
@@ -26,13 +30,18 @@ export class TagService {
     });
 
     if (!tag) {
-      throw new NotFoundError('Tag não encontrada');
+      throw new NotFoundError("Tag não encontrada");
     }
 
     return tag;
   }
 
-  static async getPostsByTag(slug: string, page: number = 1, limit: number = 20, userId?: string) {
+  static async getPostsByTag(
+    slug: string,
+    page: number = 1,
+    limit: number = 20,
+    userId?: string
+  ) {
     try {
       const tag = await this.getTagBySlug(slug);
 
@@ -72,7 +81,7 @@ export class TagService {
                 }
               : false,
           },
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           skip,
           take: limit,
         }),
@@ -93,7 +102,10 @@ export class TagService {
         updatedAt: post.updatedAt,
         author: post.author,
         tags: post.tags.map((pt) => pt.tag),
-        userVote: post.voteList && post.voteList.length > 0 ? post.voteList[0].type.toLowerCase() : null,
+        userVote:
+          post.voteList && post.voteList.length > 0
+            ? post.voteList[0].type.toLowerCase()
+            : null,
       }));
 
       return {
@@ -116,10 +128,10 @@ export class TagService {
     });
 
     if (existing) {
-      throw new ValidationError('Tag com este nome já existe');
+      throw new ValidationError("Tag com este nome já existe");
     }
 
-    const slug = await generateUniqueSlug(data.name, 'tag');
+    const slug = await generateUniqueSlug(data.name, "tag");
 
     const tag = await prisma.tag.create({
       data: {
@@ -132,13 +144,16 @@ export class TagService {
     return tag;
   }
 
-  static async updateTag(id: string, data: { name?: string; description?: string }) {
+  static async updateTag(
+    id: string,
+    data: { name?: string; description?: string }
+  ) {
     const tag = await prisma.tag.findUnique({
       where: { id },
     });
 
     if (!tag) {
-      throw new NotFoundError('Tag não encontrada');
+      throw new NotFoundError("Tag não encontrada");
     }
 
     // If name is being updated, check uniqueness and regenerate slug
@@ -149,10 +164,10 @@ export class TagService {
       });
 
       if (existing) {
-        throw new ValidationError('Tag com este nome já existe');
+        throw new ValidationError("Tag com este nome já existe");
       }
 
-      slug = await generateUniqueSlug(data.name, 'tag');
+      slug = await generateUniqueSlug(data.name, "tag");
     }
 
     const updated = await prisma.tag.update({
@@ -178,16 +193,149 @@ export class TagService {
     });
 
     if (!tag) {
-      throw new NotFoundError('Tag não encontrada');
+      throw new NotFoundError("Tag não encontrada");
     }
 
     if (tag._count.posts > 0) {
-      throw new ValidationError('Não é possível eliminar tag com posts associados');
+      throw new ValidationError(
+        "Não é possível eliminar tag com posts associados"
+      );
     }
 
     await prisma.tag.delete({
       where: { id },
     });
   }
-}
 
+  // ============================================
+  // TAG FOLLOW FUNCTIONALITY
+  // ============================================
+
+  static async followTag(userId: string, tagId: string) {
+    // Check if tag exists
+    const tag = await prisma.tag.findUnique({
+      where: { id: tagId },
+    });
+
+    if (!tag) {
+      throw new NotFoundError("Tag não encontrada");
+    }
+
+    // Check if already following
+    const existing = await prisma.userTagFollow.findUnique({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+    });
+
+    if (existing) {
+      throw new ValidationError("Já está a seguir esta tag");
+    }
+
+    // Create follow
+    await prisma.userTagFollow.create({
+      data: {
+        userId,
+        tagId,
+        notifyOnNewPost: true,
+      },
+    });
+
+    return { message: "Tag seguida com sucesso" };
+  }
+
+  static async unfollowTag(userId: string, tagId: string) {
+    // Check if following
+    const existing = await prisma.userTagFollow.findUnique({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+    });
+
+    if (!existing) {
+      throw new NotFoundError("Não está a seguir esta tag");
+    }
+
+    // Delete follow
+    await prisma.userTagFollow.delete({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+    });
+
+    return { message: "Deixou de seguir a tag" };
+  }
+
+  static async getFollowedTags(userId: string) {
+    const follows = await prisma.userTagFollow.findMany({
+      where: { userId },
+      include: {
+        tag: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    return follows.map((f) => ({
+      ...f.tag,
+      followedAt: f.createdAt,
+      notifyOnNewPost: f.notifyOnNewPost,
+    }));
+  }
+
+  static async isFollowingTag(userId: string, tagId: string): Promise<boolean> {
+    const follow = await prisma.userTagFollow.findUnique({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+    });
+
+    return !!follow;
+  }
+
+  static async updateTagNotificationPreference(
+    userId: string,
+    tagId: string,
+    notifyOnNewPost: boolean
+  ) {
+    const follow = await prisma.userTagFollow.findUnique({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+    });
+
+    if (!follow) {
+      throw new NotFoundError("Não está a seguir esta tag");
+    }
+
+    await prisma.userTagFollow.update({
+      where: {
+        userId_tagId: {
+          userId,
+          tagId,
+        },
+      },
+      data: {
+        notifyOnNewPost,
+      },
+    });
+
+    return { message: "Preferências atualizadas" };
+  }
+}

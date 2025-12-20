@@ -86,11 +86,18 @@ export class ContactAdminController {
    * POST /api/admin/contact-messages/:id/reply
    * Send reply to contact message
    */
+
   static async sendReply(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
       const { replyMessage } = req.body;
-      const adminEmail = req.user!.email;
+      const adminEmail = (req.user as { email?: string })?.email;
+
+      if (!adminEmail) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Email do admin não encontrado." });
+      }
 
       await ContactAdminService.sendReply(id, replyMessage, adminEmail);
 
@@ -107,7 +114,7 @@ export class ContactAdminController {
    * GET /api/admin/contact-messages/stats
    * Get statistics
    */
-  static async getStats(req: Request, res: Response, next: NextFunction) {
+  static async getStats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await ContactAdminService.getStats();
 

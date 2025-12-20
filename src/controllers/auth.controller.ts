@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '@/services/auth.service';
-import { ApiResponse } from '@/types';
+import { Request, Response, NextFunction } from "express";
+import { AuthService } from "@/services/auth.service";
+import { ApiResponse } from "@/types";
 
 export class AuthController {
   static async register(req: Request, res: Response, next: NextFunction) {
@@ -11,7 +11,7 @@ export class AuthController {
         success: true,
         data: {
           user: result,
-          message: 'Registo efetuado com sucesso. Verifique o seu email.',
+          message: "Registo efetuado com sucesso. Verifique o seu email.",
         },
       };
 
@@ -72,7 +72,7 @@ export class AuthController {
       const response: ApiResponse = {
         success: true,
         data: {
-          message: 'Se o email existir, receberá instruções de recuperação.',
+          message: "Se o email existir, receberá instruções de recuperação.",
         },
       };
 
@@ -90,7 +90,7 @@ export class AuthController {
       const response: ApiResponse = {
         success: true,
         data: {
-          message: 'Password alterada com sucesso.',
+          message: "Password alterada com sucesso.",
         },
       };
 
@@ -108,7 +108,7 @@ export class AuthController {
       const response: ApiResponse = {
         success: true,
         data: {
-          message: 'Email verificado com sucesso.',
+          message: "Email verificado com sucesso.",
         },
       };
 
@@ -121,12 +121,16 @@ export class AuthController {
   static async changePassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { currentPassword, newPassword } = req.body;
-      await AuthService.changePassword(req.user!.id, currentPassword, newPassword);
+      await AuthService.changePassword(
+        (req.user as any).id,
+        currentPassword,
+        newPassword
+      );
 
       const response: ApiResponse = {
         success: true,
         data: {
-          message: 'Password alterada com sucesso.',
+          message: "Password alterada com sucesso.",
         },
       };
 
@@ -136,4 +140,3 @@ export class AuthController {
     }
   }
 }
-

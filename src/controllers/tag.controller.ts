@@ -113,4 +113,92 @@ export class TagController {
       next(error);
     }
   }
+
+  // ============================================
+  // TAG FOLLOW ENDPOINTS
+  // ============================================
+
+  static async followTag(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      const result = await TagService.followTag(userId, id);
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async unfollowTag(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+
+      const result = await TagService.unfollowTag(userId, id);
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getFollowedTags(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const userId = req.user!.id;
+
+      const tags = await TagService.getFollowedTags(userId);
+
+      const response: ApiResponse = {
+        success: true,
+        data: tags,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async updateNotificationPreference(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const { id } = req.params;
+      const userId = req.user!.id;
+      const { notifyOnNewPost } = req.body;
+
+      const result = await TagService.updateTagNotificationPreference(
+        userId,
+        id,
+        notifyOnNewPost
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

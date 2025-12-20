@@ -5,7 +5,7 @@ import { ApiResponse } from "@/types";
 export class UserController {
   static async getProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await UserService.getProfile(req.user!.id);
+      const user = await UserService.getProfile((req.user as any).id);
 
       const response: ApiResponse = {
         success: true,
@@ -20,7 +20,10 @@ export class UserController {
 
   static async updateProfile(req: Request, res: Response, next: NextFunction) {
     try {
-      const user = await UserService.updateProfile(req.user!.id, req.body);
+      const user = await UserService.updateProfile(
+        (req.user as any).id,
+        req.body
+      );
 
       const response: ApiResponse = {
         success: true,
@@ -46,7 +49,7 @@ export class UserController {
       }
 
       const result = await UserService.uploadAvatar(
-        req.user!.id,
+        (req.user as any).id,
         req.file.buffer
       );
 
@@ -63,7 +66,7 @@ export class UserController {
 
   static async deleteAvatar(req: Request, res: Response, next: NextFunction) {
     try {
-      await UserService.deleteAvatar(req.user!.id);
+      await UserService.deleteAvatar((req.user as any).id);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -87,7 +90,7 @@ export class UserController {
       }
 
       const result = await UserService.uploadCoverImage(
-        req.user!.id,
+        (req.user as any).id,
         req.file.buffer
       );
 
@@ -108,7 +111,7 @@ export class UserController {
     next: NextFunction
   ) {
     try {
-      await UserService.deleteCoverImage(req.user!.id);
+      await UserService.deleteCoverImage((req.user as any).id);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -161,7 +164,7 @@ export class UserController {
   ) {
     try {
       const preferences = await UserService.getNotificationPreferences(
-        req.user!.id
+        (req.user as any).id
       );
 
       const response: ApiResponse = {
@@ -182,7 +185,7 @@ export class UserController {
   ) {
     try {
       const preferences = await UserService.updateNotificationPreferences(
-        req.user!.id,
+        (req.user as any).id,
         req.body
       );
 
@@ -205,9 +208,30 @@ export class UserController {
     try {
       const { currentPassword, newPassword } = req.body;
       const result = await UserService.changePassword(
-        req.user!.id,
+        (req.user as any).id,
         currentPassword,
         newPassword
+      );
+
+      const response: ApiResponse = {
+        success: true,
+        data: result,
+      };
+
+      res.json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async requestAccountDeletion(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) {
+    try {
+      const result = await UserService.requestAccountDeletion(
+        (req.user as any).id
       );
 
       const response: ApiResponse = {
@@ -227,8 +251,13 @@ export class UserController {
    */
   static async deleteAccount(req: Request, res: Response, next: NextFunction) {
     try {
-      const { password } = req.body;
-      const result = await UserService.deleteAccount(req.user!.id, password);
+      const { password, token, confirmation } = req.body;
+      // confirmation will still be validated by schema
+      const result = await UserService.deleteAccount(
+        (req.user as any).id,
+        password,
+        token
+      );
 
       const response: ApiResponse = {
         success: true,

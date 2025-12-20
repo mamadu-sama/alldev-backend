@@ -1,24 +1,30 @@
-import { Request, Response, NextFunction } from 'express';
-import { FeatureRequestService } from '@/services/feature-request.service';
-import { FeatureRequestCategory, FeatureRequestStatus } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import { FeatureRequestService } from "@/services/feature-request.service";
+import { FeatureRequestCategory, FeatureRequestStatus } from "@prisma/client";
 
 export class FeatureRequestController {
   static async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const { page = 1, limit = 20, sortBy = 'votes', category, status } = req.query;
-      const userId = req.user?.id;
+      const {
+        page = 1,
+        limit = 20,
+        sortBy = "votes",
+        category,
+        status,
+      } = req.query;
+      const userId = (req.user as any)?.id;
 
       const result = await FeatureRequestService.getAll(
         Number(page),
         Number(limit),
-        sortBy as 'votes' | 'recent' | 'comments',
+        sortBy as "votes" | "recent" | "comments",
         category as FeatureRequestCategory,
         status as FeatureRequestStatus
       );
 
       // Check which ones user has voted for
       if (userId) {
-        const requestIds = result.requests.map(r => r.id);
+        const requestIds = result.requests.map((r) => r.id);
         const votes = await prisma.featureRequestVote.findMany({
           where: {
             featureRequestId: { in: requestIds },
@@ -27,8 +33,8 @@ export class FeatureRequestController {
           select: { featureRequestId: true },
         });
 
-        const votedIds = new Set(votes.map(v => v.featureRequestId));
-        result.requests = result.requests.map(r => ({
+        const votedIds = new Set(votes.map((v) => v.featureRequestId));
+        result.requests = result.requests.map((r) => ({
           ...r,
           hasVoted: votedIds.has(r.id),
         }));
@@ -47,7 +53,7 @@ export class FeatureRequestController {
   static async getById(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const userId = req.user?.id;
+      const userId = (req.user as any)?.id;
 
       const request = await FeatureRequestService.getById(id, userId);
 
@@ -62,7 +68,7 @@ export class FeatureRequestController {
 
   static async create(req: Request, res: Response, next: NextFunction) {
     try {
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       const { title, description, category } = req.body;
 
       const request = await FeatureRequestService.create(userId, {
@@ -74,7 +80,7 @@ export class FeatureRequestController {
       res.status(201).json({
         success: true,
         data: request,
-        message: 'Sugestão criada com sucesso!',
+        message: "Sugestão criada com sucesso!",
       });
     } catch (error) {
       next(error);
@@ -84,7 +90,7 @@ export class FeatureRequestController {
   static async toggleVote(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
 
       const result = await FeatureRequestService.toggleVote(id, userId);
 
@@ -100,10 +106,14 @@ export class FeatureRequestController {
   static async addComment(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const userId = req.user!.id;
+      const userId = (req.user as any)?.id;
       const { content } = req.body;
 
-      const comment = await FeatureRequestService.addComment(id, userId, content);
+      const comment = await FeatureRequestService.addComment(
+        id,
+        userId,
+        content
+      );
 
       res.status(201).json({
         success: true,
@@ -117,22 +127,26 @@ export class FeatureRequestController {
   static async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { id } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any)?.id;
       const { status } = req.body;
 
-      const request = await FeatureRequestService.updateStatus(id, status, adminId);
+      const request = await FeatureRequestService.updateStatus(
+        id,
+        status,
+        adminId
+      );
 
       res.json({
         success: true,
         data: request,
-        message: 'Status atualizado com sucesso!',
+        message: "Status atualizado com sucesso!",
       });
     } catch (error) {
       next(error);
     }
   }
 
-  static async getStats(req: Request, res: Response, next: NextFunction) {
+  static async getStats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await FeatureRequestService.getStats();
 
@@ -147,5 +161,4 @@ export class FeatureRequestController {
 }
 
 // Import prisma for quick vote check
-import { prisma } from '@/config/database';
-
+import { prisma } from "@/config/database";

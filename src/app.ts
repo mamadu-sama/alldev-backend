@@ -4,6 +4,7 @@ import helmet from "helmet";
 import morgan from "morgan";
 import compression from "compression";
 import path from "path";
+import passport from "./config/passport.config";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
 import { globalRateLimiter } from "./middleware/rateLimiter.middleware";
@@ -16,9 +17,10 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
+const allowedOrigins = env.FRONTEND_URL.split(",").map((url) => url.trim());
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: allowedOrigins,
     credentials: true,
   })
 );
@@ -29,6 +31,9 @@ app.use(compression());
 // Body parsing
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true, limit: "10mb" }));
+
+// Initialize Passport
+app.use(passport.initialize());
 
 // Serve static files (uploaded sounds)
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -42,12 +47,12 @@ if (env.NODE_ENV === "development") {
 
 // Rate limiting (only for production or unauthenticated users)
 if (env.NODE_ENV === "production") {
-app.use(globalRateLimiter);
+  app.use(globalRateLimiter);
 }
 // In development, skip global rate limiting to allow easier testing
 
 // Health check
-app.get("/health", (req, res) => {
+app.get("/health", (_req, res) => {
   res.json({
     status: "ok",
     timestamp: new Date().toISOString(),
@@ -62,7 +67,7 @@ app.use(checkMaintenance);
 app.use(env.API_PREFIX, routes);
 
 // 404 handler
-app.use((req, res) => {
+app.use((_req, res) => {
   res.status(404).json({
     success: false,
     error: {

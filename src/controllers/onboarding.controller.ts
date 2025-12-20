@@ -107,7 +107,7 @@ export class OnboardingController {
    * Obtém estatísticas de onboarding (apenas admin)
    */
   static async getOnboardingStats(
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
   ) {

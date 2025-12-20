@@ -179,8 +179,288 @@ async function main() {
   await prisma.userRole.deleteMany();
   await prisma.socialLinks.deleteMany();
   await prisma.refreshToken.deleteMany();
+  await prisma.privacyPolicyContent.deleteMany();
+  await prisma.cookiePolicyContent.deleteMany();
+  await prisma.termsOfUseContent.deleteMany();
   await prisma.user.deleteMany();
   console.log("✅ Banco limpo!\n");
+
+  // Criar Política de Privacidade
+  console.log("📜 Criando Política de Privacidade...");
+  await prisma.privacyPolicyContent.create({
+    data: {
+      dataCollectionUserProvided: `Dados de cadastro: nome, nome de usuário, endereço de e-mail, senha (criptografada)
+Dados de perfil: foto de perfil, biografia, localização, site pessoal, links de redes sociais (GitHub, LinkedIn, Twitter)
+Dados profissionais: habilidades técnicas, experiência, empresa atual
+Conteúdo: perguntas, respostas, comentários, código-fonte e outros materiais publicados`,
+
+      dataCollectionAutomatic: `Dados de uso: páginas visitadas, funcionalidades utilizadas, tempo de permanência, interações (votos, comentários)
+Dados técnicos: endereço IP, tipo e versão do navegador, sistema operacional, tipo de dispositivo
+Dados de cookies: identificadores únicos, preferências de sessão (veja nossa Política de Cookies)
+Dados de logs: registros de acesso, erros, atividades de segurança`,
+
+      dataCollectionThirdParty: `Login social: se você optar por autenticar via GitHub, Google ou LinkedIn, recebemos seu nome, e-mail e foto de perfil dessas plataformas
+Integrações: dados de repositórios públicos do GitHub quando vinculados ao perfil`,
+
+      dataUsageDescription: `Utilizamos seus dados pessoais para as seguintes finalidades:
+
+ESSENCIAL - Fornecer nossos serviços: criar e gerenciar sua conta, permitir publicação de conteúdo, processar interações
+
+ESSENCIAL - Comunicação: enviar notificações sobre atividades (respostas, votos, menções), atualizações de serviço e alertas de segurança
+
+LEGÍTIMO - Personalização: recomendar conteúdo relevante, adaptar a experiência com base em suas preferências e interesses
+
+LEGÍTIMO - Análise e melhorias: entender como a plataforma é utilizada, identificar problemas, desenvolver novos recursos
+
+ESSENCIAL - Segurança: detectar fraudes, spam e abusos; proteger a comunidade; cumprir obrigações legais
+
+CONSENTIMENTO - Marketing: enviar newsletters e comunicações promocionais (apenas com seu consentimento explícito)`,
+
+      dataSharingDescription: `Conteúdo público: perguntas, respostas, comentários e informações de perfil são visíveis publicamente. Seu nome de usuário e avatar aparecem junto ao conteúdo que você publica.
+
+Prestadores de serviços: compartilhamos dados com empresas que nos ajudam a operar a plataforma (hospedagem, análise, e-mail), sob contratos de confidencialidade.
+
+Requisitos legais: podemos divulgar dados quando exigido por lei, ordem judicial ou para proteger direitos, propriedade ou segurança da Alldev e seus usuários.
+
+Transações corporativas: em caso de fusão, aquisição ou venda de ativos, seus dados podem ser transferidos como parte da transação, com aviso prévio.`,
+
+      dataSharingImportantNote: `Nunca vendemos seus dados pessoais para terceiros. Não compartilhamos seu e-mail ou informações privadas com anunciantes.`,
+
+      securityMeasures: `Criptografia: todas as comunicações são protegidas por HTTPS/TLS. Senhas são armazenadas com hash bcrypt
+Controle de acesso: acesso a dados restrito a funcionários autorizados sob princípio do menor privilégio
+Monitoramento: sistemas de detecção de intrusão e logs de auditoria
+Backups: backups criptografados regulares com recuperação de desastres
+Avaliações: testes de segurança periódicos e atualizações de vulnerabilidades`,
+
+      securityDisclaimer: `Apesar de nossos esforços, nenhum sistema é 100% seguro. Caso ocorra uma violação de dados que afete suas informações, notificaremos você e as autoridades competentes conforme exigido pela LGPD.`,
+
+      dataRetentionDescription: `Conta ativa: dados mantidos enquanto sua conta estiver ativa
+Após exclusão da conta: dados de identificação removidos em até 30 dias; conteúdo público pode ser anonimizado e mantido
+Logs de segurança: mantidos por até 12 meses para investigação de incidentes
+Obrigações legais: alguns dados podem ser retidos por períodos mais longos quando exigido por lei`,
+
+      lgpdRightsDescription: `De acordo com a Lei Geral de Proteção de Dados (LGPD), você tem os seguintes direitos:
+
+Confirmação e Acesso: Confirmar se tratamos seus dados e acessar uma cópia
+Correção: Corrigir dados incompletos, inexatos ou desatualizados
+Anonimização/Bloqueio: Anonimizar, bloquear ou eliminar dados desnecessários
+Portabilidade: Receber seus dados em formato estruturado
+Eliminação: Solicitar exclusão de dados tratados com consentimento
+Revogação: Revogar consentimento a qualquer momento`,
+
+      lgpdContactInfo: `Para exercer seus direitos, acesse as configurações de privacidade em seu perfil ou entre em contato conosco pelo e-mail privacidade@alldev.com.br. Responderemos em até 15 dias úteis.`,
+
+      minorsPolicy: `A Alldev não é destinada a menores de 16 anos. Não coletamos intencionalmente dados de crianças. Se você é pai/mãe ou responsável e acredita que seu filho forneceu dados para nós, entre em contato para que possamos tomar as medidas apropriadas.`,
+
+      internationalTransfers: `Nossos servidores estão localizados no Brasil e nos Estados Unidos. Se você está acessando de outro país, seus dados podem ser transferidos internacionalmente. Garantimos que tais transferências cumpram as exigências da LGPD através de cláusulas contratuais padrão e outras salvaguardas apropriadas.`,
+
+      accountDeletionDescription: `Você pode solicitar a exclusão da sua conta a qualquer momento nas configurações do perfil. Ao excluir sua conta:`,
+
+      accountDeletionProcess: `Seus dados de perfil serão removidos permanentemente
+Seu conteúdo público (perguntas, respostas) será anonimizado, não excluído, para preservar a integridade das discussões
+Seus votos e interações serão mantidos de forma anônima
+E-mails transacionais cessarão imediatamente`,
+
+      dpoName: "João Silva",
+      dpoEmail: "privacidade@alldev.com.br",
+      dpoContactPage: "alldev.com.br/contato",
+    },
+  });
+  console.log("✅ Política de Privacidade criada!\n");
+
+  // Criar Termos de Uso
+  console.log("📜 Criando Termos de Uso...");
+  await prisma.termsOfUseContent.create({
+    data: {
+      introduction: `Bem-vindo à Alldev! Estes Termos de Uso ("Termos") regem o acesso e uso da plataforma Alldev ("Plataforma", "Serviço", "nós" ou "nosso"), uma comunidade online para desenvolvedores de software. Ao acessar ou utilizar nossa Plataforma, você ("Usuário", "você") concorda em estar vinculado a estes Termos. Se você não concordar com algum aspecto destes Termos, não utilize nossos serviços.`,
+
+      acceptanceSection: `1.1. Ao criar uma conta ou utilizar a Plataforma, você declara ter pelo menos 16 anos de idade e capacidade legal para aceitar estes Termos.
+
+1.2. Se você estiver utilizando a Plataforma em nome de uma organização, você declara ter autoridade para vincular essa organização a estes Termos.
+
+1.3. Reservamo-nos o direito de modificar estes Termos a qualquer momento. Notificaremos sobre alterações significativas por e-mail ou através de aviso na Plataforma. O uso continuado após tais modificações constitui aceitação dos novos Termos.`,
+
+      accountSection: `2.1. Para utilizar determinadas funcionalidades da Plataforma, você deve criar uma conta fornecendo informações precisas e completas.
+
+2.2. Você é responsável por manter a confidencialidade de suas credenciais de acesso e por todas as atividades realizadas em sua conta.
+
+2.3. Você concorda em notificar imediatamente a Alldev sobre qualquer uso não autorizado de sua conta ou qualquer outra violação de segurança.
+
+2.4. Cada pessoa pode manter apenas uma conta ativa. Contas duplicadas podem ser encerradas sem aviso prévio.
+
+2.5. A Alldev reserva-se o direito de recusar o registro ou cancelar contas a seu critério, especialmente em casos de violação destes Termos.`,
+
+      userContentLicense: `Ao publicar conteúdo na Plataforma (perguntas, respostas, comentários, código, etc.), você concede à Alldev uma licença mundial, não exclusiva, isenta de royalties, sublicenciável e transferível para usar, reproduzir, modificar, adaptar, publicar, traduzir e distribuir tal conteúdo.`,
+
+      userContentCreativeCommons: `Todo o conteúdo textual contribuído pelos usuários é licenciado sob Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0), permitindo que outros compartilhem e adaptem o trabalho, desde que atribuam crédito adequado.`,
+
+      userContentCodeLicense: `Trechos de código compartilhados na Plataforma são disponibilizados sob licença MIT, salvo indicação contrária do autor.`,
+
+      userContentResponsibility: `Você declara e garante que possui todos os direitos necessários sobre o conteúdo que publica e que tal conteúdo não viola direitos de terceiros. A Alldev não se responsabiliza pelo conteúdo publicado pelos usuários, mas reserva-se o direito de remover qualquer conteúdo que viole estes Termos.`,
+
+      prohibitedConduct: `Ao utilizar a Plataforma, você concorda em NÃO:
+
+• Publicar conteúdo ilegal, difamatório, obsceno, ameaçador, discriminatório ou que viole direitos de terceiros
+• Fazer spam, autopromoção excessiva ou publicidade não autorizada
+• Tentar acessar contas de outros usuários ou sistemas não autorizados
+• Interferir no funcionamento da Plataforma ou sobrecarregar nossos servidores
+• Coletar informações de outros usuários sem consentimento
+• Usar bots, scrapers ou outros meios automatizados sem autorização
+• Evadir suspensões ou banimentos criando novas contas
+• Manipular o sistema de reputação através de votos falsos ou contas múltiplas
+• Publicar malware, vírus ou código malicioso
+• Assediar, intimidar ou perseguir outros usuários`,
+
+      moderationDescription: `A Alldev emprega moderadores para manter a qualidade e segurança da comunidade. Moderadores podem editar, ocultar ou remover conteúdo que viole estes Termos.`,
+
+      penaltiesDescription: `Penalidades por violações podem incluir:
+
+• Aviso: Notificação sobre comportamento inadequado
+• Suspensão temporária: Bloqueio de acesso por período determinado (1 dia a 30 dias)
+• Suspensão permanente: Banimento definitivo da Plataforma
+• Remoção de conteúdo: Exclusão de posts, comentários ou perfil
+• Redução de reputação: Perda de pontos de reputação`,
+
+      appealProcess: `Decisões de moderação podem ser contestadas através do sistema de apelação. Recursos devem ser apresentados em até 7 dias após a penalidade.`,
+
+      disclaimerSection: `A Plataforma é fornecida "como está" e "conforme disponível", sem garantias de qualquer tipo, expressas ou implícitas. Não garantimos que a Plataforma será ininterrupta, segura, livre de erros ou que atenderá a suas expectativas específicas. O conteúdo publicado por usuários representa apenas as opiniões de seus autores. A Alldev não endossa nem se responsabiliza por tais opiniões. Código-fonte e soluções técnicas compartilhados na Plataforma são fornecidos para fins educacionais. Use-os por sua conta e risco.`,
+
+      liabilityLimit: `Na extensão máxima permitida pela lei aplicável, a Alldev não será responsável por quaisquer danos indiretos, incidentais, especiais, consequenciais ou punitivos decorrentes do uso ou incapacidade de uso da Plataforma. Nossa responsabilidade total por quaisquer reclamações relacionadas a estes Termos não excederá o valor pago por você à Alldev nos últimos 12 meses, se aplicável.`,
+
+      changesAndTermination: `Podemos modificar, suspender ou descontinuar qualquer aspecto da Plataforma a qualquer momento, com ou sem aviso prévio. Você pode encerrar sua conta a qualquer momento através das configurações de perfil. Ao encerrar, seu conteúdo permanecerá na Plataforma sob as licenças concedidas. Reservamo-nos o direito de encerrar ou suspender sua conta por violação destes Termos ou por qualquer motivo razoável.`,
+
+      governingLaw: `Estes Termos são regidos pelas leis da República Federativa do Brasil, independentemente de conflitos de disposições legais.`,
+
+      jurisdiction: `Fica eleito o foro da Comarca de São Paulo/SP para dirimir quaisquer controvérsias decorrentes destes Termos.`,
+
+      entireAgreement: `Estes Termos, junto com nossa Política de Privacidade e Política de Cookies, constituem o acordo integral entre você e a Alldev.`,
+
+      severability: `Se qualquer disposição destes Termos for considerada inválida, as demais disposições permanecerão em pleno vigor.`,
+
+      contactEmail: "legal@alldev.com.br",
+      contactPage: "alldev.com.br/contato",
+    },
+  });
+  console.log("✅ Termos de Uso criados!\n");
+
+  // Criar Política de Cookies
+  console.log("📜 Criando Política de Cookies...");
+  await prisma.cookiePolicyContent.create({
+    data: {
+      introduction: `Esta Política de Cookies explica o que são cookies, como a Alldev os utiliza, os tipos de cookies que empregamos e como você pode gerenciar suas preferências. Esta política complementa nossa Política de Privacidade.`,
+
+      whatAreCookiesDescription: `Cookies são pequenos arquivos de texto armazenados no seu dispositivo (computador, tablet ou celular) quando você visita um site. Eles são amplamente utilizados para fazer sites funcionarem, melhorar a experiência do usuário e fornecer informações aos proprietários do site.`,
+
+      similarTechnologies: `Além de cookies, também utilizamos tecnologias semelhantes como:
+
+• Local Storage: armazena dados sem data de expiração no navegador
+• Session Storage: armazena dados apenas durante a sessão do navegador
+• Web beacons: pequenas imagens invisíveis que ajudam a rastrear comportamento do usuário`,
+
+      whyWeUseCookies: `Utilizamos cookies para várias finalidades essenciais:
+
+ESSENCIAL - Autenticação: manter você logado durante a navegação
+ESSENCIAL - Segurança: prevenir fraudes e proteger sua conta
+FUNCIONAL - Preferências: lembrar suas configurações e idioma
+FUNCIONAL - Funcionalidades: permitir recursos como temas e notificações
+ANALÍTICO - Desempenho: entender como você usa a plataforma para melhorias
+ANALÍTICO - Métricas: coletar dados agregados sobre uso e tráfego`,
+
+      essentialCookiesDescription: `Cookies Essenciais são necessários para o funcionamento básico da plataforma. Sem eles, você não pode fazer login, postar conteúdo ou usar funcionalidades principais. Estes cookies não podem ser desativados.
+
+Exemplos:
+• alldev_session: mantém sua sessão de login ativa
+• alldev_csrf: proteção contra ataques CSRF
+• alldev_auth: token de autenticação JWT`,
+
+      functionalCookiesDescription: `Cookies Funcionais melhoram sua experiência armazenando preferências e configurações pessoais. Você pode desativá-los, mas isso afetará funcionalidades específicas.
+
+Exemplos:
+• alldev_theme: sua preferência de tema (claro/escuro)
+• alldev_language: idioma escolhido
+• alldev_notifications: preferências de notificação
+• alldev_sidebar: estado do sidebar (expandido/colapsado)`,
+
+      analyticsCookiesDescription: `Cookies Analíticos nos ajudam a entender como você interage com a plataforma, permitindo melhorias baseadas em dados. Todos os dados são anonimizados e agregados.
+
+Serviços utilizados:
+• Google Analytics: análise de tráfego e comportamento (opcional)
+• Hotjar ou similar: mapas de calor e gravações de sessão (opcional)
+
+Dados coletados:
+• Páginas visitadas
+• Tempo de permanência
+• Origem do tráfego
+• Dispositivo e navegador utilizado`,
+
+      marketingCookiesDescription: `Atualmente, a Alldev NÃO utiliza cookies de marketing ou publicidade. Não rastreamos você para fins de anúncios e não compartilhamos seus dados com redes de publicidade.`,
+
+      marketingNote: `Se no futuro implementarmos recursos de marketing, você será notificado e terá controle total sobre essas preferências através do nosso banner de consentimento de cookies.`,
+
+      cookieDurationDescription: `Os cookies utilizados pela Alldev têm diferentes durações:
+
+• Cookies de Sessão: expiram quando você fecha o navegador (ex: alldev_session)
+• Cookies Persistentes: permanecem por um período definido:
+  - Autenticação: 7 a 30 dias
+  - Preferências: 365 dias (1 ano)
+  - Analytics: 90 dias
+
+Você pode limpar todos os cookies a qualquer momento através das configurações do seu navegador.`,
+
+      manageCookiesAlldev: `A Alldev oferece controle granular sobre cookies através do nosso banner de consentimento:
+
+1. Ao visitar pela primeira vez, você verá um banner solicitando consentimento
+2. Você pode aceitar todos os cookies ou personalizar suas preferências
+3. Cookies Essenciais não podem ser desativados
+4. Cookies Funcionais e Analíticos são opcionais
+5. Suas preferências são salvas e respeitadas em todas as visitas
+
+Para alterar suas preferências:
+→ Acesse Configurações > Privacidade e Cookies
+→ Ou clique no link "Gerenciar Cookies" no rodapé`,
+
+      manageCookiesBrowser: `Você também pode gerenciar cookies diretamente pelo navegador:
+
+• Google Chrome: Configurações > Privacidade e segurança > Cookies
+• Firefox: Opções > Privacidade e Segurança > Cookies e dados de sites
+• Safari: Preferências > Privacidade > Gerenciar dados de sites
+• Edge: Configurações > Cookies e permissões de site
+
+Para instruções detalhadas:
+→ Chrome: chrome://settings/cookies
+→ Firefox: about:preferences#privacy
+→ Safari: support.apple.com/guide/safari
+→ Edge: microsoft.com/edge/privacy-settings`,
+
+      manageCookiesThirdParty: `Se você deseja bloquear cookies de terceiros (como Google Analytics):
+
+1. Use extensões de navegador como Privacy Badger ou uBlock Origin
+2. Ative "Não Rastrear" (DNR) nas configurações do navegador
+3. Use navegação privada/anônima
+4. Configure bloqueio de rastreadores nativos do navegador`,
+
+      manageCookiesWarning: `⚠️ IMPORTANTE: Bloquear ou deletar cookies pode afetar funcionalidades da Alldev:
+
+• Você pode ser desconectado automaticamente
+• Suas preferências (tema, idioma) serão perdidas
+• Algumas funcionalidades podem não funcionar corretamente
+• Você terá que fazer login novamente
+
+Recomendamos manter pelo menos os cookies Essenciais e Funcionais ativos para uma melhor experiência.`,
+
+      updatesDescription: `Podemos atualizar esta Política de Cookies periodicamente para refletir mudanças em nossas práticas ou requisitos legais. Quando fizermos alterações significativas, notificaremos você através de:
+
+• Um aviso destacado na plataforma
+• E-mail para usuários registrados
+• Atualização da data "Última atualização" no topo desta página
+
+Recomendamos revisar esta política periodicamente para se manter informado sobre como usamos cookies.`,
+
+      contactEmail: "privacidade@alldev.com.br",
+      contactPage: "alldev.com.br/contato",
+    },
+  });
+  console.log("✅ Política de Cookies criada!\n");
 
   // Hash de senha padrão
   const passwordHash = await bcrypt.hash("senha123", 10);
@@ -496,6 +776,9 @@ async function main() {
   // Estatísticas finais
   console.log("📈 Estatísticas do seed:");
   console.log("========================");
+  console.log(`📜 Política de Privacidade: ✅`);
+  console.log(`📜 Termos de Uso: ✅`);
+  console.log(`📜 Política de Cookies: ✅`);
   console.log(
     `👤 Usuários: ${allUsers.length} (1 admin + ${users.length} comuns)`
   );

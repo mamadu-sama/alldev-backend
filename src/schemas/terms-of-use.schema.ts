@@ -1,0 +1,25 @@
+import { z } from "zod";
+
+export const updateTermsOfUseSchema = z.object({
+  introduction: z.string().min(10).optional(),
+  acceptanceSection: z.string().min(10).optional(),
+  accountSection: z.string().min(10).optional(),
+  userContentLicense: z.string().min(10).optional(),
+  userContentCreativeCommons: z.string().min(10).optional(),
+  userContentCodeLicense: z.string().min(10).optional(),
+  userContentResponsibility: z.string().min(10).optional(),
+  prohibitedConduct: z.string().min(10).optional(),
+  moderationDescription: z.string().min(10).optional(),
+  penaltiesDescription: z.string().min(10).optional(),
+  appealProcess: z.string().min(10).optional(),
+  disclaimerSection: z.string().min(10).optional(),
+  liabilityLimit: z.string().min(10).optional(),
+  changesAndTermination: z.string().min(10).optional(),
+  governingLaw: z.string().min(10).optional(),
+  jurisdiction: z.string().min(10).optional(),
+  entireAgreement: z.string().min(10).optional(),
+  severability: z.string().min(10).optional(),
+  contactEmail: z.string().email().optional(),
+  contactPage: z.string().min(5).optional(),
+  changeDescription: z.string().min(10).max(500).optional(),
+});

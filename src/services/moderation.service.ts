@@ -1,19 +1,19 @@
-import { prisma } from '@/config/database';
-import { Role } from '@prisma/client';
-import { logger } from '@/utils/logger';
-import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
-import { NotFoundError, ValidationError } from '@/types';
+import { prisma } from "@/config/database";
+import { ModeratorActionType } from "@prisma/client";
+import { logger } from "@/utils/logger";
+import { getPaginationParams, createPaginationMeta } from "@/utils/pagination";
+import { NotFoundError, ValidationError } from "@/types";
 
 export class ModerationService {
   static async hidePost(postId: string, moderatorId: string, reason: string) {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     if (post.isHidden) {
-      throw new ValidationError('Post já está oculto');
+      throw new ValidationError("Post já está oculto");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -25,9 +25,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'HIDE_POST',
+          actionType: ModeratorActionType.HIDE_POST,
           reason,
-          targetPostId: postId,
+          postId: postId,
         },
       });
     });
@@ -43,11 +43,11 @@ export class ModerationService {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     if (!post.isHidden) {
-      throw new ValidationError('Post não está oculto');
+      throw new ValidationError("Post não está oculto");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -59,9 +59,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'UNHIDE_POST',
-          reason: 'Post restored',
-          targetPostId: postId,
+          actionType: ModeratorActionType.UNHIDE_POST,
+          reason: "Post restored",
+          postId: postId,
         },
       });
     });
@@ -76,11 +76,11 @@ export class ModerationService {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     if (post.isLocked) {
-      throw new ValidationError('Post já está bloqueado');
+      throw new ValidationError("Post já está bloqueado");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -92,9 +92,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'LOCK_POST',
+          actionType: ModeratorActionType.HIDE_POST,
           reason,
-          targetPostId: postId,
+          postId: postId,
         },
       });
     });
@@ -110,11 +110,11 @@ export class ModerationService {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     if (!post.isLocked) {
-      throw new ValidationError('Post não está bloqueado');
+      throw new ValidationError("Post não está bloqueado");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -126,9 +126,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'UNLOCK_POST',
-          reason: 'Post unlocked',
-          targetPostId: postId,
+          actionType: ModeratorActionType.UNHIDE_POST,
+          reason: "Post unlocked",
+          postId: postId,
         },
       });
     });
@@ -139,15 +139,21 @@ export class ModerationService {
     });
   }
 
-  static async hideComment(commentId: string, moderatorId: string, reason: string) {
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+  static async hideComment(
+    commentId: string,
+    moderatorId: string,
+    reason: string
+  ) {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
 
     if (!comment) {
-      throw new NotFoundError('Comentário não encontrado');
+      throw new NotFoundError("Comentário não encontrado");
     }
 
     if (comment.isHidden) {
-      throw new ValidationError('Comentário já está oculto');
+      throw new ValidationError("Comentário já está oculto");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -159,9 +165,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'HIDE_COMMENT',
+          actionType: ModeratorActionType.DELETE_COMMENT,
           reason,
-          targetCommentId: commentId,
+          commentId: commentId,
         },
       });
     });
@@ -174,14 +180,16 @@ export class ModerationService {
   }
 
   static async unhideComment(commentId: string, moderatorId: string) {
-    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId },
+    });
 
     if (!comment) {
-      throw new NotFoundError('Comentário não encontrado');
+      throw new NotFoundError("Comentário não encontrado");
     }
 
     if (!comment.isHidden) {
-      throw new ValidationError('Comentário não está oculto');
+      throw new ValidationError("Comentário não está oculto");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -193,9 +201,9 @@ export class ModerationService {
       await tx.moderatorAction.create({
         data: {
           moderatorId,
-          action: 'UNHIDE_COMMENT',
-          reason: 'Comment restored',
-          targetCommentId: commentId,
+          actionType: ModeratorActionType.DELETE_COMMENT,
+          reason: "Comment restored",
+          commentId: commentId,
         },
       });
     });
@@ -219,27 +227,21 @@ export class ModerationService {
               avatarUrl: true,
             },
           },
-          targetPost: {
+          post: {
             select: {
               id: true,
               title: true,
               slug: true,
             },
           },
-          targetComment: {
+          comment: {
             select: {
               id: true,
               content: true,
             },
           },
-          targetUser: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -248,10 +250,7 @@ export class ModerationService {
 
     return {
       data: actions,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 }
-
-
-

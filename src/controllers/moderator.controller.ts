@@ -12,7 +12,7 @@ export class ModeratorController {
     next: NextFunction
   ) {
     try {
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
       const stats = await ModeratorService.getDashboardStats(moderatorId);
 
       res.status(200).json({ success: true, data: stats });
@@ -49,7 +49,7 @@ export class ModeratorController {
    * GET /api/moderator/queue/stats
    * Get queue statistics
    */
-  static async getQueueStats(req: Request, res: Response, next: NextFunction) {
+  static async getQueueStats(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await ModeratorService.getQueueStats();
 
@@ -65,7 +65,7 @@ export class ModeratorController {
    */
   static async takeAction(req: Request, res: Response, next: NextFunction) {
     try {
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
       const actionData = req.body;
 
       const action = await ModeratorService.takeAction(moderatorId, actionData);
@@ -187,7 +187,7 @@ export class ModeratorController {
    */
   static async resolveReport(req: Request, res: Response, next: NextFunction) {
     try {
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
       const { id } = req.params;
       const { action, notes } = req.body;
 
@@ -214,7 +214,7 @@ export class ModeratorController {
    */
   static async getHistory(req: Request, res: Response, next: NextFunction) {
     try {
-      const moderatorId = req.user!.id;
+      const moderatorId = (req.user as any)?.id;
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 20;
       const search = req.query.search as string;

@@ -1,11 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { AdminService } from "@/services/admin.service";
+import { logger } from "@/utils/logger";
 import { UserService } from "@/services/user.service";
 import { Role } from "@prisma/client";
 
 export class AdminController {
   static async getAllUsers(req: Request, res: Response, next: NextFunction) {
     try {
+      // Debug: log access to this endpoint and requester
+      // eslint-disable-next-line no-console
+      console.log("GET /api/admin/users called", {
+        user: req.user,
+        query: req.query,
+      });
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 50;
 
@@ -25,7 +32,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const { roles } = req.body;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       const user = await AdminService.updateUserRole(
         adminId,
@@ -46,7 +53,7 @@ export class AdminController {
     try {
       const { userId } = req.params;
       const { reason, duration } = req.body;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.banUser(adminId, userId, reason, duration);
 
@@ -62,7 +69,7 @@ export class AdminController {
   static async unbanUser(req: Request, res: Response, next: NextFunction) {
     try {
       const { userId } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.unbanUser(adminId, userId);
 
@@ -78,7 +85,7 @@ export class AdminController {
   static async deleteUser(req: Request, res: Response, next: NextFunction) {
     try {
       const { userId } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.deleteUser(adminId, userId);
 
@@ -89,7 +96,7 @@ export class AdminController {
   }
 
   static async getMaintenanceMode(
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
   ) {
@@ -112,7 +119,12 @@ export class AdminController {
   ) {
     try {
       const { isEnabled, message, endTime } = req.body;
-      const adminId = req.user!.id;
+      logger.info("Received updateMaintenanceMode request", {
+        isEnabled,
+        message,
+        endTime,
+      });
+      const adminId = (req.user as any).id;
 
       const maintenance = await AdminService.updateMaintenanceMode(
         adminId,
@@ -130,7 +142,7 @@ export class AdminController {
     }
   }
 
-  static async getStatistics(req: Request, res: Response, next: NextFunction) {
+  static async getStatistics(_req: Request, res: Response, next: NextFunction) {
     try {
       const stats = await AdminService.getStatistics();
 
@@ -192,7 +204,7 @@ export class AdminController {
   static async deletePost(req: Request, res: Response, next: NextFunction) {
     try {
       const { postId } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.deletePost(adminId, postId);
 
@@ -206,7 +218,7 @@ export class AdminController {
     try {
       const { postId } = req.params;
       const { reason } = req.body;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.hidePost(adminId, postId, reason);
 
@@ -222,7 +234,7 @@ export class AdminController {
   static async unhidePost(req: Request, res: Response, next: NextFunction) {
     try {
       const { postId } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.unhidePost(adminId, postId);
 
@@ -256,7 +268,7 @@ export class AdminController {
   static async deleteComment(req: Request, res: Response, next: NextFunction) {
     try {
       const { commentId } = req.params;
-      const adminId = req.user!.id;
+      const adminId = (req.user as any).id;
 
       await AdminService.deleteComment(adminId, commentId);
 

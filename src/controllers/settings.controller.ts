@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { SettingsService } from '@/services/settings.service';
 
 export class SettingsController {
-  static async getSettings(req: Request, res: Response, next: NextFunction) {
+  static async getSettings(_req: Request, res: Response, next: NextFunction) {
     try {
       const settings = await SettingsService.getSettings();
 

@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { Role } from "@prisma/client";
 import { OnboardingController } from "@/controllers/onboarding.controller";
 import { authenticate } from "@/middleware/auth.middleware";
 import { requireRole } from "@/middleware/role.middleware";
@@ -40,7 +41,7 @@ router.post("/reset", OnboardingController.resetOnboarding);
  */
 router.get(
   "/stats",
-  requireRole(["ADMIN"]),
+  requireRole(Role.ADMIN),
   OnboardingController.getOnboardingStats
 );
 

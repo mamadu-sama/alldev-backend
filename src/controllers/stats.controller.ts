@@ -4,7 +4,7 @@ import { ApiResponse } from "@/types";
 
 export class StatsController {
   static async getCommunityStats(
-    req: Request,
+    _req: Request,
     res: Response,
     next: NextFunction
   ) {

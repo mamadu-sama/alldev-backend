@@ -1,13 +1,16 @@
-import { prisma } from '@/config/database';
-import { Role } from '@prisma/client';
-import { logger } from '@/utils/logger';
-import { getPaginationParams, createPaginationMeta } from '@/utils/pagination';
-import { NotFoundError, ValidationError } from '@/types';
-import { clearMaintenanceCache } from '@/middleware/maintenance.middleware';
+import { prisma } from "@/config/database";
+import { Role } from "@prisma/client";
+import { logger } from "@/utils/logger";
+import { getPaginationParams, createPaginationMeta } from "@/utils/pagination";
+import { NotFoundError, ValidationError } from "@/types";
+import { clearMaintenanceCache } from "@/middleware/maintenance.middleware";
 
 export class AdminService {
   static async getAllUsers(page: number = 1, limit: number = 50) {
     const { skip, take } = getPaginationParams({ page, limit });
+    // Debug: log that getAllUsers is executing with params
+    // eslint-disable-next-line no-console
+    console.log("AdminService.getAllUsers", { page, limit, skip, take });
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
@@ -30,7 +33,7 @@ export class AdminService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -39,22 +42,22 @@ export class AdminService {
 
     return {
       data: users,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 
   static async updateUserRole(adminId: string, userId: string, roles: Role[]) {
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { roles: true }
+      include: { roles: true },
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     if (userId === adminId) {
-      throw new ValidationError('Não pode alterar as suas próprias permissões');
+      throw new ValidationError("Não pode alterar as suas próprias permissões");
     }
 
     // Delete all existing roles and create new ones
@@ -66,7 +69,7 @@ export class AdminService {
 
       // Create new roles
       await tx.userRole.createMany({
-        data: roles.map(role => ({
+        data: roles.map((role) => ({
           userId,
           role,
         })),
@@ -86,29 +89,34 @@ export class AdminService {
     logger.info(`User roles updated by admin`, {
       adminId,
       userId,
-      oldRoles: user.roles.map(r => r.role),
+      oldRoles: user.roles.map((r) => r.role),
       newRoles: roles,
     });
 
     return updatedUser;
   }
 
-  static async banUser(adminId: string, userId: string, reason: string, duration?: number) {
-    const user = await prisma.user.findUnique({ 
+  static async banUser(
+    adminId: string,
+    userId: string,
+    reason: string,
+    duration?: number
+  ) {
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { roles: true }
+      include: { roles: true },
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     if (userId === adminId) {
-      throw new ValidationError('Não pode banir a si próprio');
+      throw new ValidationError("Não pode banir a si próprio");
     }
 
-    if (user.roles.some(r => r.role === 'ADMIN')) {
-      throw new ValidationError('Não pode banir um administrador');
+    if (user.roles.some((r) => r.role === "ADMIN")) {
+      throw new ValidationError("Não pode banir um administrador");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -120,7 +128,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'BAN_USER',
+          actionType: "BAN_USER",
           reason,
           targetUserId: userId,
         },
@@ -139,11 +147,11 @@ export class AdminService {
     const user = await prisma.user.findUnique({ where: { id: userId } });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     if (user.isActive) {
-      throw new ValidationError('Utilizador não está banido');
+      throw new ValidationError("Utilizador não está banido");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -155,8 +163,8 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'UNBAN_USER',
-          reason: 'User unbanned',
+          actionType: "UNBAN_USER",
+          reason: "User unbanned",
           targetUserId: userId,
         },
       });
@@ -169,21 +177,21 @@ export class AdminService {
   }
 
   static async deleteUser(adminId: string, userId: string) {
-    const user = await prisma.user.findUnique({ 
+    const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { roles: true }
+      include: { roles: true },
     });
 
     if (!user) {
-      throw new NotFoundError('Utilizador não encontrado');
+      throw new NotFoundError("Utilizador não encontrado");
     }
 
     if (userId === adminId) {
-      throw new ValidationError('Não pode deletar a si próprio');
+      throw new ValidationError("Não pode deletar a si próprio");
     }
 
-    if (user.roles.some(r => r.role === 'ADMIN')) {
-      throw new ValidationError('Não pode deletar um administrador');
+    if (user.roles.some((r) => r.role === "ADMIN")) {
+      throw new ValidationError("Não pode deletar um administrador");
     }
 
     // Delete user and all related data (cascade)
@@ -199,14 +207,16 @@ export class AdminService {
   }
 
   static async getMaintenanceMode() {
-    let maintenance = await prisma.maintenanceMode.findFirst();
+    let maintenance = await prisma.maintenanceMode.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
 
     if (!maintenance) {
       // Create default maintenance mode entry
       maintenance = await prisma.maintenanceMode.create({
         data: {
           isEnabled: false,
-          message: 'O site está em manutenção. Voltaremos em breve.',
+          message: "O site está em manutenção. Voltaremos em breve.",
         },
       });
     }
@@ -220,13 +230,15 @@ export class AdminService {
     message?: string,
     endTime?: Date | null
   ) {
-    let maintenance = await prisma.maintenanceMode.findFirst();
+    let maintenance = await prisma.maintenanceMode.findFirst({
+      orderBy: { updatedAt: "desc" },
+    });
 
     if (!maintenance) {
       maintenance = await prisma.maintenanceMode.create({
         data: {
           isEnabled,
-          message: message || 'O site está em manutenção. Voltaremos em breve.',
+          message: message || "O site está em manutenção. Voltaremos em breve.",
           endTime: endTime || null,
           updatedBy: adminId,
         },
@@ -273,7 +285,7 @@ export class AdminService {
       prisma.post.count(),
       prisma.comment.count(),
       prisma.tag.count(),
-      prisma.report.count({ where: { status: 'PENDING' } }),
+      prisma.report.count({ where: { status: "PENDING" } }),
       prisma.user.count({
         where: {
           createdAt: {
@@ -340,7 +352,7 @@ export class AdminService {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
     });
   }
@@ -355,7 +367,7 @@ export class AdminService {
         level: true,
         createdAt: true,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       take: limit,
     });
   }
@@ -396,7 +408,7 @@ export class AdminService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -405,7 +417,7 @@ export class AdminService {
 
     return {
       data: posts,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 
@@ -416,12 +428,12 @@ export class AdminService {
     });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     // Cannot delete admin's posts
-    if (post.author.roles.some(r => r.role === 'ADMIN')) {
-      throw new ValidationError('Não pode deletar posts de administradores');
+    if (post.author.roles.some((r) => r.role === "ADMIN")) {
+      throw new ValidationError("Não pode deletar posts de administradores");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -429,8 +441,8 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'DELETE_POST',
-          reason: 'Post deleted by admin',
+          actionType: "DELETE_POST",
+          reason: "Post deleted by admin",
           postId: postId,
         },
       });
@@ -452,7 +464,7 @@ export class AdminService {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -464,7 +476,7 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'HIDE_POST',
+          actionType: "HIDE_POST",
           reason,
           postId: postId,
         },
@@ -478,7 +490,7 @@ export class AdminService {
     const post = await prisma.post.findUnique({ where: { id: postId } });
 
     if (!post) {
-      throw new NotFoundError('Post não encontrado');
+      throw new NotFoundError("Post não encontrado");
     }
 
     await prisma.$transaction(async (tx) => {
@@ -490,8 +502,8 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'UNHIDE_POST',
-          reason: 'Post unhidden by admin',
+          actionType: "UNHIDE_POST",
+          reason: "Post unhidden by admin",
           postId: postId,
         },
       });
@@ -527,7 +539,7 @@ export class AdminService {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take,
       }),
@@ -536,7 +548,7 @@ export class AdminService {
 
     return {
       data: comments,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 
@@ -547,12 +559,14 @@ export class AdminService {
     });
 
     if (!comment) {
-      throw new NotFoundError('Comentário não encontrado');
+      throw new NotFoundError("Comentário não encontrado");
     }
 
     // Cannot delete admin's comments
-    if (comment.author.roles.some(r => r.role === 'ADMIN')) {
-      throw new ValidationError('Não pode deletar comentários de administradores');
+    if (comment.author.roles.some((r) => r.role === "ADMIN")) {
+      throw new ValidationError(
+        "Não pode deletar comentários de administradores"
+      );
     }
 
     await prisma.$transaction(async (tx) => {
@@ -560,8 +574,8 @@ export class AdminService {
       await tx.moderatorAction.create({
         data: {
           moderatorId: adminId,
-          actionType: 'DELETE_COMMENT',
-          reason: 'Comment deleted by admin',
+          actionType: "DELETE_COMMENT",
+          reason: "Comment deleted by admin",
           commentId: commentId,
         },
       });
@@ -578,6 +592,3 @@ export class AdminService {
     });
   }
 }
-
-
-

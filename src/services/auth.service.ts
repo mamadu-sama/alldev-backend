@@ -12,8 +12,10 @@ import {
   AuthenticationError,
   ConflictError,
   NotFoundError,
+  BadRequestError,
 } from "@/types";
 import { Role } from "@prisma/client";
+import { logger } from "@/utils/logger";
 
 export class AuthService {
   static async register(data: {
@@ -67,8 +69,17 @@ export class AuthService {
       },
     });
 
-    // Send verification email
-    await EmailService.sendVerificationEmail(user.email, verificationToken);
+    // Send verification email (non-blocking)
+    try {
+      await EmailService.sendVerificationEmail(
+        user.email,
+        verificationToken,
+        user.username
+      );
+    } catch (error) {
+      // Log error but don't fail registration
+      logger.error("Failed to send verification email:", error);
+    }
 
     return {
       id: user.id,
@@ -97,6 +108,10 @@ export class AuthService {
     }
 
     // Verify password
+    if (!user.passwordHash) {
+      throw new AuthenticationError("Email ou password incorretos");
+    }
+
     const isPasswordValid = await comparePassword(password, user.passwordHash);
 
     if (!isPasswordValid) {
@@ -149,7 +164,8 @@ export class AuthService {
 
   static async refreshToken(token: string) {
     try {
-      const payload = verifyRefreshToken(token);
+      // verify refresh token signature/payload (result intentionally ignored)
+      verifyRefreshToken(token);
 
       // Check if token exists in database
       const storedToken = await prisma.refreshToken.findUnique({
@@ -225,8 +241,17 @@ export class AuthService {
       },
     });
 
-    // Send reset email
-    await EmailService.sendPasswordResetEmail(user.email, resetToken);
+    // Send reset email (non-blocking)
+    try {
+      await EmailService.sendPasswordResetEmail(
+        user.email,
+        resetToken,
+        user.username
+      );
+    } catch (error) {
+      // Log error but don't fail the password reset request
+      logger.error("Failed to send password reset email:", error);
+    }
   }
 
   static async resetPassword(token: string, newPassword: string) {
@@ -270,14 +295,6 @@ export class AuthService {
   static async verifyEmail(token: string) {
     const verification = await prisma.emailVerification.findUnique({
       where: { token },
-      include: {
-        user: {
-          select: {
-            id: true,
-            isVerified: true,
-          },
-        },
-      },
     });
 
     if (!verification) {
@@ -289,7 +306,12 @@ export class AuthService {
     }
 
     // Check if user is already verified
-    if (verification.user.isVerified) {
+    const user = await prisma.user.findUnique({
+      where: { id: verification.userId },
+      select: { isVerified: true },
+    });
+
+    if (user?.isVerified) {
       // User is already verified, just delete the token
       await prisma.emailVerification.deleteMany({
         where: { userId: verification.userId },
@@ -339,6 +361,20 @@ export class AuthService {
 
     if (!user) {
       throw new NotFoundError("Utilizador não encontrado");
+    }
+
+    // Verificar se usuário usa OAuth (Google ou GitHub)
+    if (user.provider && user.provider !== "local") {
+      throw new BadRequestError(
+        `Não é possível alterar a password. Você faz login via ${user.provider}.`
+      );
+    }
+
+    // Verificar se tem passwordHash (usuários locais devem ter)
+    if (!user.passwordHash) {
+      throw new AuthenticationError(
+        "Password não configurada para este utilizador"
+      );
     }
 
     // Verify current password

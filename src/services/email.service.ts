@@ -2,8 +2,6 @@ import nodemailer from "nodemailer";
 import { env } from "@/config/env";
 import { logger } from "@/utils/logger";
 
-import { Resend } from "resend";
-
 /** 
  use resend to send emails
 **/
@@ -12,15 +10,44 @@ let transporter: nodemailer.Transporter | null = null;
 
 // Initialize transporter if SMTP is configured
 if (env.SMTP_HOST && env.SMTP_PORT && env.SMTP_USER && env.SMTP_PASS) {
+  const smtpPort = parseInt(env.SMTP_PORT, 10);
+  const isSecure = smtpPort === 465;
+
+  logger.info(
+    `📧 Initializing SMTP transporter: ${env.SMTP_HOST}:${smtpPort} (secure: ${isSecure})`
+  );
+
   transporter = nodemailer.createTransport({
     host: env.SMTP_HOST,
-    port: parseInt(env.SMTP_PORT, 10),
-    secure: parseInt(env.SMTP_PORT, 10) === 465,
+    port: smtpPort,
+    secure: isSecure,
     auth: {
       user: env.SMTP_USER,
       pass: env.SMTP_PASS,
     },
+    // Hostinger specific settings
+    tls: {
+      rejectUnauthorized: true,
+      minVersion: "TLSv1.2",
+    },
+    connectionTimeout: 10000, // 10 seconds
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
+
+  // Verify SMTP connection on startup
+  transporter.verify((error, success) => {
+    if (error) {
+      logger.error("❌ SMTP connection failed:", error);
+      logger.error(
+        `Check your credentials: ${env.SMTP_HOST}:${smtpPort}, user: ${env.SMTP_USER}`
+      );
+    } else {
+      logger.info("✅ SMTP transporter ready to send emails");
+    }
+  });
+} else {
+  logger.warn("⚠️ SMTP not configured. Email sending disabled.");
 }
 
 // Base email styles - Professional and clean
@@ -230,11 +257,17 @@ export class EmailService {
     }
 
     const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${token}`;
-    const displayName = username || "Programador";
+    const displayName = username || "DEV";
+    const fromEmail =
+      env.EMAIL_FROM || env.SMTP_FROM || env.SMTP_USER || "noreply@alldev.pt";
+
+    logger.info(
+      `📧 Sending verification email to ${email} (from: ${fromEmail})`
+    );
 
     try {
-      await transporter.sendMail({
-        from: `"Alldev Community" <${env.EMAIL_FROM}>`,
+      const info = await transporter.sendMail({
+        from: `"Alldev Community" <${fromEmail}>`,
         to: email,
         subject: "🚀 Bem-vindo ao Alldev - Verificação de Email Necessária",
         html: `
@@ -431,10 +464,12 @@ export class EmailService {
           </html>
         `,
       });
-      logger.info(`Verification email sent to ${email}`);
+      logger.info(
+        `✅ Verification email sent successfully to ${email} (messageId: ${info.messageId})`
+      );
     } catch (error) {
-      logger.error("Failed to send verification email:", error);
-      throw error;
+      logger.error(`❌ Failed to send verification email to ${email}:`, error);
+      // Don't throw - let the calling function handle it
     }
   }
 
@@ -455,10 +490,16 @@ export class EmailService {
       dateStyle: "short",
       timeStyle: "short",
     });
+    const fromEmail =
+      env.EMAIL_FROM || env.SMTP_FROM || env.SMTP_USER || "noreply@alldev.pt";
+
+    logger.info(
+      `📧 Sending password reset email to ${email} (from: ${fromEmail})`
+    );
 
     try {
-      await transporter.sendMail({
-        from: `"Alldev Security" <${env.EMAIL_FROM}>`,
+      const info = await transporter.sendMail({
+        from: `"Alldev Security" <${fromEmail}>`,
         to: email,
         subject: "🔐 Recuperação de Password - Alldev",
         html: `
@@ -609,10 +650,90 @@ export class EmailService {
           </html>
         `,
       });
-      logger.info(`Password reset email sent to ${email}`);
+      logger.info(
+        `✅ Password reset email sent successfully to ${email} (messageId: ${info.messageId})`
+      );
     } catch (error) {
-      logger.error("Failed to send password reset email:", error);
-      throw error;
+      logger.error(
+        `❌ Failed to send password reset email to ${email}:`,
+        error
+      );
+      // Don't throw - let the calling function handle it
+    }
+  }
+
+  static async sendAccountDeletionEmail(
+    email: string,
+    token: string,
+    username?: string
+  ): Promise<void> {
+    // Always console.log the token to help debugging in dev environments
+    // eslint-disable-next-line no-console
+    console.log(`Account deletion token for ${email}: ${token}`);
+
+    if (!transporter) {
+      logger.warn("Email service not configured. Skipping email send.");
+      return;
+    }
+
+    const displayName = username || "Membro";
+    const fromEmail =
+      env.EMAIL_FROM || env.SMTP_FROM || env.SMTP_USER || "noreply@alldev.pt";
+
+    try {
+      // eslint-disable-next-line no-console
+      console.log(
+        `Attempting to send account deletion email to ${email} via SMTP host: ${env.SMTP_HOST}:${env.SMTP_PORT}`
+      );
+      const info = await transporter.sendMail({
+        from: `"Alldev Security" <${fromEmail}>`,
+        to: email,
+        subject: "🔐 Código para confirmar exclusão de conta - Alldev",
+        html: `
+          <!DOCTYPE html>
+          <html lang="pt">
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Código de Exclusão de Conta</title>
+            ${baseStyles}
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>🔐 Código de Exclusão de Conta</h1>
+              </div>
+              <div class="content">
+                <p class="greeting">Olá, ${displayName}!</p>
+                <p class="text">Recebemos um pedido para excluir a tua conta. Para confirmar, por favor utiliza o código abaixo na página de definições e digita <strong>DELETE</strong> quando solicitado.</p>
+                <div class="info-box">
+                  <p style="font-size: 20px; font-weight: 700; margin: 0;">${token}</p>
+                  <p style="margin-top: 10px; font-size: 13px; color: #6b7280;">Código válido por 1 hora.</p>
+                </div>
+                <p class="text">Se não solicitaste esta ação, ignora este email.</p>
+              </div>
+              <div class="footer">
+                <p style="color: #6b7280; font-size: 13px;">Alldev • Comunidade de Programadores</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `,
+      });
+      logger.info(
+        `Account deletion email sent to ${email} (messageId: ${info.messageId})`
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        `Account deletion email sent to ${email} (messageId: ${info.messageId})`
+      );
+    } catch (error) {
+      logger.error(`Failed to send account deletion email to ${email}:`, error);
+      // eslint-disable-next-line no-console
+      console.error(
+        `Failed to send account deletion email to ${email}:`,
+        error
+      );
     }
   }
 
@@ -632,10 +753,12 @@ export class EmailService {
       dateStyle: "long",
       timeStyle: "short",
     });
+    const fromEmail =
+      env.EMAIL_FROM || env.SMTP_FROM || env.SMTP_USER || "noreply@alldev.pt";
 
     try {
       await transporter.sendMail({
-        from: `"Alldev Moderation" <${env.EMAIL_FROM}>`,
+        from: `"Alldev Moderation" <${fromEmail}>`,
         to: email,
         subject: "⚠️ Aviso Importante da Moderação - Alldev",
         html: `
@@ -821,7 +944,7 @@ export class EmailService {
       logger.info(`Warning email sent to ${email}`);
     } catch (error) {
       logger.error("Failed to send warning email:", error);
-      throw error;
+      // Don't throw - this is a non-critical operation
     }
   }
 }

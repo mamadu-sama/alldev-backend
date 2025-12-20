@@ -1,18 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
-import { ZodError } from 'zod';
-import { AppError, ValidationError } from '@/types';
-import { logger } from '@/utils/logger';
-import { env } from '@/config/env';
+import { Request, Response, NextFunction } from "express";
+import { ZodError } from "zod";
+import { AppError } from "@/types";
+import { logger } from "@/utils/logger";
+import { env } from "@/config/env";
 
 export const errorHandler = (
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ) => {
-  logger.error('Error occurred:', {
+  logger.error("Error occurred:", {
     error: err.message,
-    stack: env.NODE_ENV === 'development' ? err.stack : undefined,
+    stack: env.NODE_ENV === "development" ? err.stack : undefined,
     path: req.path,
     method: req.method,
   });
@@ -22,10 +22,10 @@ export const errorHandler = (
     return res.status(400).json({
       success: false,
       error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Dados inválidos',
+        code: "VALIDATION_ERROR",
+        message: "Dados inválidos",
         details: err.errors.map((e) => ({
-          field: e.path.join('.'),
+          field: e.path.join("."),
           message: e.message,
         })),
       },
@@ -45,44 +45,46 @@ export const errorHandler = (
   }
 
   // JWT errors
-  if (err.name === 'JsonWebTokenError') {
+  if (err.name === "JsonWebTokenError") {
     return res.status(401).json({
       success: false,
       error: {
-        code: 'INVALID_TOKEN',
-        message: 'Token inválido',
+        code: "INVALID_TOKEN",
+        message: "Token inválido",
       },
     });
   }
 
-  if (err.name === 'TokenExpiredError') {
+  if (err.name === "TokenExpiredError") {
     return res.status(401).json({
       success: false,
       error: {
-        code: 'TOKEN_EXPIRED',
-        message: 'Token expirado',
+        code: "TOKEN_EXPIRED",
+        message: "Token expirado",
       },
     });
   }
 
   // Multer errors
-  if (err.name === 'MulterError') {
+  if (err.name === "MulterError") {
     return res.status(400).json({
       success: false,
       error: {
-        code: 'FILE_UPLOAD_ERROR',
+        code: "FILE_UPLOAD_ERROR",
         message: err.message,
       },
     });
   }
 
   // Default error
-  res.status(500).json({
+  return res.status(500).json({
     success: false,
     error: {
-      code: 'INTERNAL_ERROR',
-      message: env.NODE_ENV === 'production' ? 'Erro interno do servidor' : err.message,
+      code: "INTERNAL_ERROR",
+      message:
+        env.NODE_ENV === "production"
+          ? "Erro interno do servidor"
+          : err.message,
     },
   });
 };
-

@@ -1,5 +1,5 @@
-import jwt from 'jsonwebtoken';
-import { env } from '@/config/env';
+import jwt from "jsonwebtoken";
+import { env } from "@/config/env";
 
 interface JwtPayload {
   sub: string;
@@ -9,25 +9,36 @@ interface JwtPayload {
 
 interface RefreshTokenPayload {
   sub: string;
-  type: 'refresh';
+  type: "refresh";
   jti: string;
 }
 
 export const generateAccessToken = (payload: JwtPayload): string => {
-  return jwt.sign(payload, env.JWT_SECRET, {
-    expiresIn: env.JWT_EXPIRES_IN,
-  });
+  return jwt.sign(
+    payload,
+    env.JWT_SECRET as string,
+    {
+      expiresIn: env.JWT_EXPIRES_IN as string,
+    } as jwt.SignOptions
+  );
 };
 
-export const generateRefreshToken = (userId: string, tokenId: string): string => {
+export const generateRefreshToken = (
+  userId: string,
+  tokenId: string
+): string => {
   const payload: RefreshTokenPayload = {
     sub: userId,
-    type: 'refresh',
+    type: "refresh",
     jti: tokenId,
   };
-  return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
-    expiresIn: env.JWT_REFRESH_EXPIRES_IN,
-  });
+  return jwt.sign(
+    payload,
+    env.JWT_REFRESH_SECRET as string,
+    {
+      expiresIn: env.JWT_REFRESH_EXPIRES_IN as string,
+    } as jwt.SignOptions
+  );
 };
 
 export const verifyAccessToken = (token: string): JwtPayload => {
@@ -37,4 +48,3 @@ export const verifyAccessToken = (token: string): JwtPayload => {
 export const verifyRefreshToken = (token: string): RefreshTokenPayload => {
   return jwt.verify(token, env.JWT_REFRESH_SECRET) as RefreshTokenPayload;
 };
-

@@ -64,9 +64,18 @@ export const changePasswordSchema = z
     path: ["confirmPassword"],
   });
 
-export const deleteAccountSchema = z.object({
-  password: z.string().min(1, "Senha é obrigatória para confirmar"),
-  confirmation: z.literal("DELETE", {
-    errorMap: () => ({ message: 'Digite "DELETE" para confirmar' }),
-  }),
-});
+export const deleteAccountSchema = z
+  .object({
+    password: z
+      .string()
+      .min(1, "Senha é obrigatória para confirmar")
+      .optional(),
+    token: z.string().min(1).optional(),
+    confirmation: z.literal("DELETE", {
+      errorMap: () => ({ message: 'Digite "DELETE" para confirmar' }),
+    }),
+  })
+  .refine((data) => !!data.password || !!data.token, {
+    message: "Informe a senha ou o código enviado por email",
+    path: ["password"],
+  });

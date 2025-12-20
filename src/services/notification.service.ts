@@ -59,7 +59,7 @@ export class NotificationService {
     return {
       notifications: formattedNotifications,
       meta: {
-        ...createPaginationMeta(page, limit, total),
+        ...createPaginationMeta({ page, limit, total }),
         unreadCount,
       },
     };
@@ -157,7 +157,7 @@ export class NotificationService {
 
     return {
       notifications,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 
@@ -355,7 +355,7 @@ export class NotificationService {
 
     return {
       notifications: notificationsWithStats,
-      meta: createPaginationMeta(page, limit, total),
+      meta: createPaginationMeta({ page, limit, total }),
     };
   }
 
