@@ -7,7 +7,7 @@ const maxRequests = parseInt(env.RATE_LIMIT_MAX_REQUESTS, 10);
 // Global rate limiter - very permissive for authenticated users
 export const globalRateLimiter = rateLimit({
   windowMs: windowMs || 15 * 60 * 1000, // 15 minutes
-  max: maxRequests || 1000, // 1000 requests per 15 min (much more reasonable)
+  max: maxRequests || 5000, // 5000 requests per 15 min (appropriate for SPAs)
   message: {
     success: false,
     error: {
@@ -17,10 +17,13 @@ export const globalRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for authenticated requests (trust logged-in users more)
-  skip: (req) => {
-    // Only apply strict rate limiting to unauthenticated users
-    return !!(req as any).user;
+  // Use different keys for authenticated vs unauthenticated users
+  // This allows separate rate limit buckets for each user
+  keyGenerator: (req) => {
+    const user = (req as any).user;
+    // Authenticated users get their own bucket (more permissive)
+    // Unauthenticated users share IP-based buckets (more restrictive)
+    return user ? `user:${user.id}` : `ip:${req.ip}`;
   },
 });
 
