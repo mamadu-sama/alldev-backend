@@ -25,7 +25,7 @@ export const checkMaintenance = async (
       "/health",
       "/api/admin", // Admin routes
       "/api/moderator", // Moderator routes
-      //"/api/auth", // Auth routes (login, register, etc.)
+      "/api/auth", // Auth routes (login, register, etc.)
     ];
 
     // Check if current path starts with any allowed path

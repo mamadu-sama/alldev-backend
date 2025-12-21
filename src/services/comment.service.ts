@@ -6,93 +6,86 @@ import { NotFoundError, AuthorizationError, ValidationError } from '@/types';
 
 export class CommentService {
   static async getCommentsByPost(postId: string, page: number = 1, limit: number = 20, userId?: string) {
-    const { skip, take } = getPaginationParams({ page, limit });
-
     // Verify post exists
     const post = await prisma.post.findUnique({ where: { id: postId } });
     if (!post) {
       throw new NotFoundError('Post não encontrado');
     }
 
-    const where = {
-      postId,
-      parentId: null, // Only top-level comments
-      isHidden: false,
-    };
-
-    const [comments, total] = await Promise.all([
-      prisma.comment.findMany({
-        where,
-        include: {
-          author: {
-            select: {
-              id: true,
-              username: true,
-              avatarUrl: true,
-              reputation: true,
-              level: true,
-            },
-          },
-          voteList: userId
-            ? {
-                where: { userId },
-                select: { type: true },
-              }
-            : false,
-          replies: {
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  username: true,
-                  avatarUrl: true,
-                  reputation: true,
-                  level: true,
-                },
-              },
-              voteList: userId
-                ? {
-                    where: { userId },
-                    select: { type: true },
-                  }
-                : false,
-            },
-            orderBy: { createdAt: 'asc' },
+    // Fetch ALL comments for this post to build the full tree
+    // Note: For extremely large comment sections, a more specialized approach might be needed
+    const allComments = await prisma.comment.findMany({
+      where: {
+        postId,
+        isHidden: false,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            username: true,
+            avatarUrl: true,
+            reputation: true,
+            level: true,
           },
         },
-        orderBy: [
-          { isAccepted: 'desc' }, // Accepted answers first
-          { votes: 'desc' },
-          { createdAt: 'asc' },
-        ],
-        skip,
-        take,
-      }),
-      prisma.comment.count({ where }),
-    ]);
+        voteList: userId
+          ? {
+            where: { userId },
+            select: { type: true },
+          }
+          : false,
+      },
+      orderBy: [
+        { isAccepted: 'desc' },
+        { votes: 'desc' },
+        { createdAt: 'asc' },
+      ],
+    });
 
-    const formattedComments = comments.map((comment) => ({
-      id: comment.id,
-      content: comment.content,
-      postId: comment.postId,
-      author: comment.author,
-      votes: comment.votes,
-      userVote: comment.voteList?.[0]?.type?.toLowerCase() || null,
-      isAccepted: comment.isAccepted,
-      createdAt: comment.createdAt,
-      replies: comment.replies.map((reply) => ({
-        id: reply.id,
-        content: reply.content,
-        postId: reply.postId,
-        author: reply.author,
-        votes: reply.votes,
-        userVote: reply.voteList?.[0]?.type?.toLowerCase() || null,
-        createdAt: reply.createdAt,
-      })),
-    }));
+    // Map to store comments by ID for building the tree
+    const commentMap = new Map<string, any>();
+    const topLevelComments: any[] = [];
+
+    // First pass: Format all comments and store in map
+    allComments.forEach((comment) => {
+      const formatted = {
+        id: comment.id,
+        content: comment.content,
+        postId: comment.postId,
+        author: comment.author,
+        parentId: comment.parentId,
+        votes: comment.votes,
+        userVote: comment.voteList?.[0]?.type?.toLowerCase() || null,
+        isAccepted: comment.isAccepted,
+        createdAt: comment.createdAt,
+        replies: [],
+      };
+      commentMap.set(comment.id, formatted);
+    });
+
+    // Second pass: Build the tree
+    commentMap.forEach((comment) => {
+      if (comment.parentId) {
+        const parent = commentMap.get(comment.parentId);
+        if (parent) {
+          parent.replies.push(comment);
+        } else {
+          // If parent not found (e.g. hidden), treat as top-level or ignore
+          topLevelComments.push(comment);
+        }
+      } else {
+        topLevelComments.push(comment);
+      }
+    });
+
+    // Pagination for top-level comments
+    const total = topLevelComments.length;
+    const { skip, take } = getPaginationParams({ page, limit });
+    const paginatedTopLevel = topLevelComments.slice(skip, skip + take);
 
     return {
-      data: formattedComments,
+      data: paginatedTopLevel,
       meta: createPaginationMeta({ page, limit, total }),
     };
   }
@@ -162,7 +155,7 @@ export class CommentService {
 
     // Send notifications asynchronously
     const author = await prisma.user.findUnique({ where: { id: authorId } });
-    
+
     if (parentComment) {
       // Notify parent comment author
       await NotificationService.notifyReply(
